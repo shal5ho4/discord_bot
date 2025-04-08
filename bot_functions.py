@@ -4,6 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+from logger import logger
+
 # config
 URL = 'https://gta5-madara.com/category/weeklyupdate/'
 LAST_SEEN_TITLE = 'last_seen_title.txt'
@@ -16,17 +18,17 @@ def get_http(url: str) -> requests.Response | None:
     headers = {'User-Agent': 'Mozilla/5.0'}
     response = requests.get(url, headers=headers)
     
-    if response.status_code == http.HTTPStatus.OK:
-        return response
-    
-    print(f'request failed with status code "{response.status_code}"...')
-    return None
+    if response.status_code != http.HTTPStatus.OK:
+        logger.error(f'request failed with status code "{response.status_code}"')
+        raise Exception(f'request failed with status code {response.status_code}')
+
+    return response
 
 
 def get_previous_title() -> str:
     with open(LAST_SEEN_TITLE, encoding='utf-8') as f:
         title = f.read()
-        # print(f'previous title: "{title}"')
+        logger.info(f'previous article title: "{title}"')
     return title
 
 
@@ -45,10 +47,10 @@ def get_article_title_and_link() -> tuple[str, str] | tuple[None, None]:
         if WEEKLY_UPDATE_KWORD in title and article.a:
             title = article.text.strip()
             link = article.a['href']
-            # print(f'new title: "{title}"')
+            logger.info(f'new article title: "{title}"')
             return title, link
     
-    print('article not found...')
+    logger.error('new article not found')
     return None, None
 
 
@@ -113,21 +115,19 @@ def get_boosted_jobs(article_url: str) -> list[str] | None:
 
 
 def get_notification_message() -> str:
-    # previous_title = get_previous_title()
-    # new_title, new_link = get_article_title_and_link()
+    previous_title = get_previous_title()
+    new_title, new_link = get_article_title_and_link()
 
-    # if previous_title != new_title:
-    #     set_new_title(new_title)
-    #     print(f'successfully updated "{LAST_SEEN_TITLE}".')
+    if previous_title != new_title:
+        set_new_title(new_title)
+        logger.info(f'successfully updated "{LAST_SEEN_TITLE}".')
 
-    test_url = 'https://gta5-madara.com/weekly20250227/'
-    date = get_date_from_url(test_url)
+    date = get_date_from_url(new_link)
 
-    topics = get_article_topics(test_url)
-    # topics = []
+    topics = get_article_topics(new_link)
     topic_lines = "\n".join([f"●{topic}" for topic in topics])
 
-    boosted_jobs = get_boosted_jobs(test_url)
+    boosted_jobs = get_boosted_jobs(new_link)
     boosted_job_lines = "\n".join([f"・{job}" for job in boosted_jobs])
 
     message = f"""🎈 {date}
@@ -138,9 +138,7 @@ def get_notification_message() -> str:
 {boosted_job_lines}
 
 ⬇️詳しくはこちら⬇️
-{test_url}
-
-"""
+{new_link}"""
 
     print(message)
     return message

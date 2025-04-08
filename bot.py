@@ -1,34 +1,33 @@
-import os
 import discord
-import dotenv
+import traceback
 from discord.ext import commands
 
 import bot_functions
+from logger import logger
+from settings import *
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-dotenv.load_dotenv(dotenv_path)
-
-TOKEN = os.getenv('BOT_TOKEN')
-CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
-USER_ID = int(os.getenv('USER_ID'))
-
+# Discord
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'✅ Logged in as {bot.user}')
-    
-    latest_title, _ = bot_functions.get_article_title_and_link()
-    previous_title = bot_functions.get_previous_title()
+    logger.info(f'✅ Logged in as {bot.user}')
+    channel = bot.get_channel(CHANNEL_ID)
 
-    if latest_title != previous_title:
-        channel = bot.get_channel(CHANNEL_ID)
-        message = bot_functions.get_notification_message()
-        message += f"<@{USER_ID}>"
+    try:
+        previous_title = bot_functions.get_previous_title()
+        new_title, _ = bot_functions.get_article_title_and_link()
+        
+        if previous_title != new_title:
+            message = bot_functions.get_notification_message()
+        else:
+            message = None
+    except Exception:
+        message = f"なにかがおかしいよ <@{USER_ID}>\n```{traceback.format_exc()}```"
+
+    if message:
         await channel.send(message)
-    else:
-        print("No new update found.")
 
 bot.run(TOKEN)
