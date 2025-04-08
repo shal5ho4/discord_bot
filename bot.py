@@ -1,6 +1,6 @@
 import discord
 import traceback
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import bot_functions
 from logger import logger
@@ -14,14 +14,20 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     logger.info(f'✅ Logged in as {bot.user}')
-    channel = bot.get_channel(CHANNEL_ID)
+    check_for_updates.start()
 
+@tasks.loop(hours=1)
+async def check_for_updates():
+    print('checking for updates...')
+
+    channel = bot.get_channel(CHANNEL_ID)
     try:
         previous_title = bot_functions.get_previous_title()
         new_title, _ = bot_functions.get_article_title_and_link()
         
         if previous_title != new_title:
             message = bot_functions.get_notification_message()
+            bot_functions.set_new_title(new_title)
         else:
             message = None
     except Exception:
@@ -29,5 +35,7 @@ async def on_ready():
 
     if message:
         await channel.send(message)
+
+    print('done!')
 
 bot.run(TOKEN)
