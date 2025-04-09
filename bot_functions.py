@@ -1,4 +1,5 @@
 import http
+import json
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -139,9 +140,18 @@ def get_notification_message() -> str:
 
 ⬇️詳しくはこちら⬇️
 {new_link}"""
-
     print(message)
+
     return message
+
+
+def send_discord_webhook(message: str, webhook_url: str):
+    headers = {'Content-Type': 'application/json'}
+    data = {'content': message}
+    response = requests.post(webhook_url, data=json.dumps(data), headers=headers)
+
+    if response.status_code != 204:
+        logger.error(f"Webhook failed with status code {response.status_code}")
 
 
 if __name__ == '__main__':
