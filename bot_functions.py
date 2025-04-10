@@ -5,11 +5,12 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-from logger import logger
+# from logger import logger
 
 # config
 URL = 'https://gta5-madara.com/category/weeklyupdate/'
-LAST_SEEN_TITLE = 'last_seen_title.txt'
+# LAST_SEEN_TITLE = 'last_seen_title.txt'
+# LAST_SEEN_TITLE = '/tmp/last_seen_title.txt'      # for Lambda
 
 WEEKLY_UPDATE_KWORD = '週アップデートまとめ'
 BOOSTED_JOB_TITLE = '報酬アップ'
@@ -20,22 +21,25 @@ def get_http(url: str) -> requests.Response | None:
     response = requests.get(url, headers=headers)
     
     if response.status_code != http.HTTPStatus.OK:
-        logger.error(f'request failed with status code "{response.status_code}"')
+        print(f'get_http: request failed with status code "{response.status_code}"')
         raise Exception(f'request failed with status code {response.status_code}')
 
     return response
 
 
-def get_previous_title() -> str:
-    with open(LAST_SEEN_TITLE, encoding='utf-8') as f:
-        title = f.read()
-        logger.info(f'previous article title: "{title}"')
-    return title
+# def get_previous_title() -> str:
+#     if not os.path.exists(LAST_SEEN_TITLE):
+#         return ""
+
+#     with open(LAST_SEEN_TITLE, encoding='utf-8') as f:
+#         title = f.read()
+#         print(f'previous article title: "{title}"')
+#     return title
 
 
-def set_new_title(title: str):
-    with open(LAST_SEEN_TITLE, 'w', encoding='utf-8') as f:
-        f.write(title)
+# def set_new_title(title: str):
+#     with open(LAST_SEEN_TITLE, 'w', encoding='utf-8') as f:
+#         f.write(title)
 
 
 def get_article_title_and_link() -> tuple[str, str] | tuple[None, None]:
@@ -48,10 +52,9 @@ def get_article_title_and_link() -> tuple[str, str] | tuple[None, None]:
         if WEEKLY_UPDATE_KWORD in title and article.a:
             title = article.text.strip()
             link = article.a['href']
-            logger.info(f'new article title: "{title}"')
             return title, link
     
-    logger.error('new article not found')
+    print('get_article_title_and_link: new article not found')
     return None, None
 
 
@@ -116,19 +119,14 @@ def get_boosted_jobs(article_url: str) -> list[str] | None:
 
 
 def get_notification_message() -> str:
-    previous_title = get_previous_title()
-    new_title, new_link = get_article_title_and_link()
+    _, url = get_article_title_and_link()
 
-    if previous_title != new_title:
-        set_new_title(new_title)
-        logger.info(f'successfully updated "{LAST_SEEN_TITLE}".')
+    date = get_date_from_url(url)
 
-    date = get_date_from_url(new_link)
-
-    topics = get_article_topics(new_link)
+    topics = get_article_topics(url)
     topic_lines = "\n".join([f"●{topic}" for topic in topics])
 
-    boosted_jobs = get_boosted_jobs(new_link)
+    boosted_jobs = get_boosted_jobs(url)
     boosted_job_lines = "\n".join([f"・{job}" for job in boosted_jobs])
 
     message = f"""🎈 {date}
@@ -139,7 +137,7 @@ def get_notification_message() -> str:
 {boosted_job_lines}
 
 ⬇️詳しくはこちら⬇️
-{new_link}"""
+{url}"""
     print(message)
 
     return message
@@ -151,7 +149,7 @@ def send_discord_webhook(message: str, webhook_url: str):
     response = requests.post(webhook_url, data=json.dumps(data), headers=headers)
 
     if response.status_code != 204:
-        logger.error(f"Webhook failed with status code {response.status_code}")
+        print(f"send_discord_webhook: Webhook failed with status code {response.status_code}")
 
 
 if __name__ == '__main__':

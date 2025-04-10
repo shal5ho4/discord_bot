@@ -1,10 +1,10 @@
-import json
-from logging import config, getLogger
+# import json
+# from logging import config, getLogger
 
-LOG_CONFIG = 'log_config.json'
+# LOG_CONFIG = 'log_config.json'
 
-with open(LOG_CONFIG) as f:
-    log_config = json.load(f)
+# with open(LOG_CONFIG) as f:
+#     log_config = json.load(f)
 
-config.dictConfig(log_config)
-logger = getLogger(__name__)
+# config.dictConfig(log_config)
+# logger = getLogger(__name__)

@@ -3,3 +3,6 @@ env/
 sample*
 .env
 lambda_package/
+lambda_layer/
+*.txt
+*.zip

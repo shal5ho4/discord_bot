@@ -4,22 +4,28 @@ from settings import *
 import traceback
 
 def lambda_handler(event=None, context=None):
+    is_test = event.get('test', False)
+    status = 200
+
     try:
-        previous_title = bot_functions.get_previous_title()
+        previous_title = get_previous_title()
         new_title, _ = bot_functions.get_article_title_and_link()
         
-        if previous_title != new_title:
+        if is_test or previous_title != new_title:
             message = bot_functions.get_notification_message()
-            bot_functions.set_new_title(new_title)
+            set_previous_title(new_title)
         else:
+            print('lambda_hander: Check complete. No updates found.')
             message = None
     except Exception:
+        status = 503
         message = f"なにかがおかしいよ <@{USER_ID}>\n```{traceback.format_exc()}```"
     
     if message:
+        print('lambda_handler: Check complete. Sending message...')
         bot_functions.send_discord_webhook(message, WEBHOOK_URL)
     
-    return {'statusCode': 200, 'body': 'Update check complete'}
+    return {'statusCode': status, 'body': 'Update check complete'}
 
 
 if __name__ == '__main__':
