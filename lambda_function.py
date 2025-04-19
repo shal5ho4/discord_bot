@@ -1,35 +1,64 @@
-import bot_functions
+import json
+import requests
+import traceback
+
+from parser import ArticleParser, ArticleListParser
 from settings import *
 
-import traceback
 
 def lambda_handler(event=None, context=None):
     is_test = event.get('test', False)
     status = 200
+    body = '✅ Update check complete'
 
     try:
+        list_parser = ArticleListParser(WEEKLY_URL)
         previous_title = get_previous_title()
-        new_title, _ = bot_functions.get_article_title_and_link()
+        new_title = list_parser.title 
         
-        if is_test or previous_title != new_title:
-            message = bot_functions.get_notification_message()
+        if previous_title != new_title or is_test:
+            article_parser = ArticleParser(list_parser.link)
+            message = article_parser.get_notification_message()
             set_previous_title(new_title)
         else:
-            print('lambda_hander: Check complete. No updates found.')
+            print('lambda_handler: Check complete. No updates found.')
             message = None
-    except Exception:
+
+    except Exception as e:
         status = 503
+        body = '❌ Update check failed'
         message = f"なにかがおかしいよ <@{USER_ID}>\n```{traceback.format_exc()}```"
+        print(repr(e))
     
     if message:
+        if status != 200 or is_test:
+            webhook_url = WEBHOOK_URL_DEBUG
+        else:
+            webhook_url = WEBHOOK_URL
+
         print('lambda_handler: Check complete. Sending message...')
-        bot_functions.send_discord_webhook(message, WEBHOOK_URL)
+        try:
+            send_discord_webhook(webhook_url, message)
+        except Exception as e:
+            status = 503
+            body = '❌ Send webhook failed'
+            print(repr(e))
     
-    return {'statusCode': status, 'body': 'Update check complete'}
+    return {'statusCode': status, 'body': body}
+
+
+def send_discord_webhook(webhook_url: str, message: str):
+    headers = {'Content-Type': 'application/json'}
+    data = {'content': message}
+    response = requests.post(webhook_url, data=json.dumps(data), headers=headers)
+
+    if not response.ok:
+        raise Exception(f'send_discord_webhook: request failed with status code {response.status_code}')
 
 
 if __name__ == '__main__':
-    lambda_handler()
+    event = {'test': True}
+    lambda_handler(event)
 
 # import discord
 # import traceback
