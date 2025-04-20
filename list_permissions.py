@@ -4,6 +4,7 @@ import time
 
 from settings import *
 
+
 intents = discord.Intents.default()
 intents.guilds = True
 
