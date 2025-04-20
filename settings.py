@@ -8,6 +8,7 @@ dotenv.load_dotenv(dotenv_path)
 
 # const
 TOKEN = os.getenv('BOT_TOKEN')
+BOT_TOKEN_CHANNEL_MANAGE = os.getenv('BOT_TOKEN_CHANNEL_MANAGE')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 USER_ID = int(os.getenv('USER_ID'))
 WEEKLY_URL = os.getenv('WEEKLY_URL')
