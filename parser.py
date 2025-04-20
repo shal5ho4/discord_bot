@@ -27,6 +27,7 @@ BOOSTED_JOB_TITLE = '報酬アップ'
 #     with open(LAST_SEEN_TITLE, 'w', encoding='utf-8') as f:
 #         f.write(title)
 
+
 class Parser:
     def __init__(self, url: str):
         self.url: str = url
