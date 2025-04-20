@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import time
 
 from settings import *
 
@@ -12,26 +13,41 @@ client = discord.Client(intents=intents)
 async def on_ready():
     print(f"✅ Logged in as {client.user}")
 
-    for guild in client.guilds:
-        print(f"\n📚 Server: {guild.name}")
-        for category in guild.categories:
-            print(f"📁 {category.name}")
-            for channel in category.channels:
-                print(f"  📝 {channel.name}")
+    try:
+        for guild in client.guilds:
+            print(f"\n📚 Server: {guild.name}")
+            for category in guild.categories:
+                print(f"📁 {category.name}")
+                for channel in category.channels:
+                    if isinstance(channel, discord.VoiceChannel):
+                        print(f"  🔊 {channel.name}")
+                    else:
+                        print(f"  📝 {channel.name}")
+                    
 
-                overwrites = channel.overwrites
-                for target, perms in overwrites.items():
-                    allowed = [name for name, value in perms if value is True]
-                    denied = [name for name, value in perms if value is False]
-                    name = f"@{target.name}" if isinstance(target, discord.Role) else target.name
+                    overwrites = channel.overwrites
+                    for target, perms in overwrites.items():
+                        if isinstance(target, discord.Role):
+                            name = f"@{target.name}"
+                        elif isinstance(target, discord.Member):
+                            name = target.name
+                        else:
+                            # fallback for unknown/deleted role/user
+                            name = f"(unknown:{target.id})"
 
-                    if allowed:
-                        print(f"    ✅ {name} allowed: {', '.join(allowed)}")
-                    if denied:
-                        print(f"    ❌ {name} denied: {', '.join(denied)}")
-                print()
+                        allowed = [p for p, v in perms if v is True]
+                        denied = [p for p, v in perms if v is False]
 
-    await client.close()
+                        if allowed:
+                            print(f"    ✅ {name} allowed: {', '.join(allowed)}")
+                        if denied:
+                            print(f"    ❌ {name} denied: {', '.join(denied)}")
+                    print()
+                    time.sleep(0.5)
+    except Exception as e:
+        print(repr(e))
+    finally:
+        await client.close()
 
 async def main():
     await client.start(BOT_TOKEN_CHANNEL_MANAGE)
