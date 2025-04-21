@@ -28,14 +28,17 @@ async def on_ready():
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    if before.channel is None and after.channel is not None:
-        voice_channel = after.channel
-        text_channel = bot.get_channel(CHANNEL_ID)
+    try:
+        if before.channel is None and after.channel is not None:
+            voice_channel = after.channel
+            text_channel = bot.get_channel(CHANNEL_ID)
 
-        if len(voice_channel.members) == 1:
-            await text_channel.send(
-                f"🎧 {member.display_name} started a voice chat in **{voice_channel.name}**!"
-            )
+            if len(voice_channel.members) == 1:
+                await text_channel.send(
+                    f"🎧 {member.display_name} started a voice chat in **{voice_channel.name}**!"
+                )
+    except Exception as e:
+        print(repr(e))
 
 
 bot.run(TOKEN)
