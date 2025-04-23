@@ -73,7 +73,7 @@ async def on_voice_state_update(
     try:
         if before.channel is None and after.channel is not None:
             voice_channel = after.channel
-            text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, default=CHANNEL_ID_TEST_TX)
+            text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
             text_channel = bot.get_channel(text_channel_id)
             
             print(f'text_channel: {text_channel.name}')
