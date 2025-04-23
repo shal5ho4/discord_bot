@@ -51,10 +51,14 @@ async def on_voice_state_update(
             if DEBUG:
                 text_channel = bot.get_channel(CHANNEL_ID_TEST_TX)
             else:
-                if voice_channel.id == CHANNEL_ID_VC_RISE:
+                if voice_channel.id == CHANNEL_ID_TEST_VC:
+                    text_channel = bot.get_channel(CHANNEL_ID_TEST_TX)
+                elif voice_channel.id == CHANNEL_ID_VC_RISE:
                     text_channel = bot.get_channel(CHANNEL_ID_TX_RISE)
                 else:
                     text_channel = bot.get_channel(CHANNEL_ID_TX_OVER_AND_RISE)
+            
+            print(f'text_channel: {text_channel.name}')
 
             if len(voice_channel.members) == 1:
                 date = get_date_str()
