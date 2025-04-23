@@ -5,6 +5,8 @@ import dotenv
 import discord
 from discord.ext import commands
 
+from server import server_thread
+
 DEBUG = False
 JST = timezone(timedelta(hours=+9), 'JST')
 
@@ -72,4 +74,5 @@ def get_date_str() -> str:
 
 
 if __name__ == '__main__':
+    server_thread()
     bot.run(TOKEN)
