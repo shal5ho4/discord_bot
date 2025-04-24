@@ -11,17 +11,7 @@ from discord.ext import commands
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 dotenv.load_dotenv(dotenv_path)
 
-
 TOKEN = os.getenv('BOT_TOKEN')
-
-intents = discord.Intents.default()
-intents.voice_states = True
-intents.guilds = True
-intents.members = True
-
-bot = commands.Bot(command_prefix='!', intents=intents)
-tree = bot.tree
-
 
 CHANNEL_ID_TEST_TX = int(os.getenv('CHANNEL_ID_TEST_TX'))
 CHANNEL_ID_TEST_VC = int(os.getenv('CHANNEL_ID_TEST_VC'))
@@ -58,6 +48,78 @@ TX_CHANNEL_IDS = {
     CHANNEL_ID_VC_OVER_2:           CHANNEL_ID_TX_OVER,
     CHANNEL_ID_VC_OVER_3:           CHANNEL_ID_TX_OVER,
 }
+
+
+intents = discord.Intents.default()
+intents.voice_states = True
+intents.guilds = True
+intents.members = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+tree = bot.tree
+
+
+##### bot commands #####
+@tree.command(name='hello', description='Say hello')
+async def hello_command(interaction: discord.Interaction):
+    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!')
+
+
+@tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
+async def list_no_role_members(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    if interaction.channel_id != CHANNEL_ID_MANAGE:
+        await interaction.followup.send('❌ ここではつかえません')
+    else:
+        try:
+            guild = interaction.guild
+            members = [m async for m in guild.fetch_members(limit=None)]
+            no_role_members = [m for m in members if len(m.roles) == 1]
+
+            if not no_role_members:
+                await interaction.followup.send("✅ 全員ロールあり！ヨシ！")
+                return
+            
+            # names = "\n".join(member.display_name for member in no_role_members)
+            names = "\n".join(m.mention for m in no_role_members)
+            await interaction.followup.send(
+                f'👥ロールがついてない人\n{names}'
+            )
+        
+        except Exception as e:
+            print(repr(e))
+            await interaction.followup.send('なにかがおかしいよ')##### bot commands #####
+@tree.command(name='hello', description='Say hello')
+async def hello_command(interaction: discord.Interaction):
+    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!')
+
+
+@tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
+async def list_no_role_members(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    if interaction.channel_id != CHANNEL_ID_MANAGE:
+        await interaction.followup.send('❌ ここではつかえません')
+    else:
+        try:
+            guild = interaction.guild
+            members = [m async for m in guild.fetch_members(limit=None)]
+            no_role_members = [m for m in members if len(m.roles) == 1]
+
+            if not no_role_members:
+                await interaction.followup.send("✅ 全員ロールあり！ヨシ！")
+                return
+            
+            # names = "\n".join(member.display_name for member in no_role_members)
+            names = "\n".join(m.mention for m in no_role_members)
+            await interaction.followup.send(
+                f'👥ロールがついてない人\n{names}'
+            )
+        
+        except Exception as e:
+            print(repr(e))
+            await interaction.followup.send('なにかがおかしいよ')
 
 
 ##### bot event functions #####
@@ -100,39 +162,6 @@ JST = timezone(timedelta(hours=+9), 'JST')
 def get_date_str() -> str:
     now = datetime.now(JST)
     return f'{now.month}月{now.day}日 {now.hour}時{now.minute}分'
-
-
-##### bot commands #####
-@tree.command(name='hello', description='Say hello')
-async def hello_command(interaction: discord.Interaction):
-    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!')
-
-
-@tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
-async def list_no_role_members(interaction: discord.Interaction):
-    await interaction.response.defer()
-
-    if interaction.channel_id != CHANNEL_ID_MANAGE:
-        await interaction.followup.send('❌ ここではつかえません')
-    else:
-        try:
-            guild = interaction.guild
-            members = [m async for m in guild.fetch_members(limit=None)]
-            no_role_members = [m for m in members if len(m.roles) == 1]
-
-            if not no_role_members:
-                await interaction.followup.send("✅ 全員ロールあり！ヨシ！")
-                return
-            
-            # names = "\n".join(member.display_name for member in no_role_members)
-            names = "\n".join(m.mention for m in no_role_members)
-            await interaction.followup.send(
-                f'👥ロールがついてない人\n{names}'
-            )
-        
-        except Exception as e:
-            print(repr(e))
-            await interaction.followup.send('なにかがおかしいよ')
 
 
 if __name__ == '__main__':
