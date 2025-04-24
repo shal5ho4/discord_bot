@@ -60,7 +60,7 @@ tree = bot.tree
 
 
 ##### bot commands #####
-@tree.command(name='hello', description='Say hello')
+@tree.command(name='henlo', description='Say hello')
 async def hello_command(interaction: discord.Interaction):
     await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!')
 
@@ -90,36 +90,6 @@ async def list_no_role_members(interaction: discord.Interaction):
         except Exception as e:
             print(repr(e))
             await interaction.followup.send('なにかがおかしいよ')##### bot commands #####
-@tree.command(name='hello', description='Say hello')
-async def hello_command(interaction: discord.Interaction):
-    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!')
-
-
-@tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
-async def list_no_role_members(interaction: discord.Interaction):
-    await interaction.response.defer()
-
-    if interaction.channel_id != CHANNEL_ID_MANAGE:
-        await interaction.followup.send('❌ ここではつかえません')
-    else:
-        try:
-            guild = interaction.guild
-            members = [m async for m in guild.fetch_members(limit=None)]
-            no_role_members = [m for m in members if len(m.roles) == 1]
-
-            if not no_role_members:
-                await interaction.followup.send("✅ 全員ロールあり！ヨシ！")
-                return
-            
-            # names = "\n".join(member.display_name for member in no_role_members)
-            names = "\n".join(m.mention for m in no_role_members)
-            await interaction.followup.send(
-                f'👥ロールがついてない人\n{names}'
-            )
-        
-        except Exception as e:
-            print(repr(e))
-            await interaction.followup.send('なにかがおかしいよ')
 
 
 ##### bot event functions #####
