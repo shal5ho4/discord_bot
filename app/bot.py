@@ -62,7 +62,9 @@ async def list_role_members(
     if interaction.channel_id != CHANNEL_ID_MANAGE:
         await interaction.followup.send('❌ ここではつかえません', silent=True)
     else:
-        members = [m.mention for m in role.members]
+        members = [member for member in role.members]
+        members.sort(key=lambda m: m.display_name.lower())
+        member_list = "\n".join(member.mention for member in members)
 
         if not members:
             await interaction.followup.send(
