@@ -2,11 +2,13 @@ import os
 import dotenv
 
 
-DEBUG = True
-# DEBUG = False
-
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 dotenv.load_dotenv(dotenv_path)
+
+DEBUG = True
+ENVIRONMENT = os.getenv('ENVIRONMENT')
+if not ENVIRONMENT or ENVIRONMENT != 'local':
+    DEBUG = False
 
 TOKEN = os.getenv('BOT_TOKEN')
 TOKEN_TEST = os.getenv('BOT_TOKEN_TEST')

@@ -59,6 +59,10 @@ async def on_ready():
     # await channel.send('Voice chat notification READY.')
 
 
+# 終了メッセージ用 {channel_id: message_id}
+# TODO: クラスにする？
+active_voice_channels = {}
+
 @bot.event
 async def on_voice_state_update(
     member: discord.Member,
@@ -71,13 +75,22 @@ async def on_voice_state_update(
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
             text_channel = bot.get_channel(text_channel_id)
             
-            print(f'text_channel: {text_channel.name}')
+            print(f'send notification to → {text_channel.name}')
 
-            if len(voice_channel.members) == 1 and text_channel:
+            if len(voice_channel.members) == 1:
                 date = get_date_str()
-                await text_channel.send(
-                    f"{date}\n🎧 <@{member.id}> が <#{voice_channel.id}> でボイスチャットを開始！"
+                message = await text_channel.send(
+                    f"{date}\n🎧 <@{member.id}> が **<#{voice_channel.id}>** でボイスチャットを開始！"
                 )
+                active_voice_channels[voice_channel.id] = message.id
+            
+            elif len(voice_channel.members) == 0 and voice_channel.id in active_voice_channels:
+                date
+                await text_channel.send(
+
+                )
+
+            
 
     except Exception as e:
         print(repr(e))
