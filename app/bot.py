@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from const import *
@@ -20,7 +21,7 @@ tree = bot.tree
 ##### bot commands #####
 @tree.command(name='henlo', description='Say hello')
 async def hello_command(interaction: discord.Interaction):
-    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!')
+    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!', silent=True)
 
 
 @tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
@@ -28,7 +29,7 @@ async def list_no_role_members(interaction: discord.Interaction):
     await interaction.response.defer()
 
     if interaction.channel_id != CHANNEL_ID_MANAGE:
-        await interaction.followup.send('❌ ここではつかえません')
+        await interaction.followup.send('❌ ここではつかえません', silent=True)
     else:
         try:
             guild = interaction.guild
@@ -36,7 +37,7 @@ async def list_no_role_members(interaction: discord.Interaction):
             no_role_members = [m for m in members if len(m.roles) == 1]
 
             if not no_role_members:
-                await interaction.followup.send("✅ 全員ロールあり！ヨシ！")
+                await interaction.followup.send("✅ 全員ロールあり！ヨシ！", silent=True)
                 return
             
             # names = "\n".join(member.display_name for member in no_role_members)
@@ -48,6 +49,34 @@ async def list_no_role_members(interaction: discord.Interaction):
         except Exception as e:
             print(repr(e))
             await interaction.followup.send('なにかがおかしいよ')
+
+
+@tree.command(name='role-member-list', description='ロールごとのメンバーを教えてくれます。')
+@app_commands.describe(role='ロールを選択！')
+async def list_role_members(
+    interaction: discord.Interaction,
+    role: discord.Role
+):
+    await interaction.response.defer()
+
+    if interaction.channel_id != CHANNEL_ID_MANAGE:
+        await interaction.followup.send('❌ ここではつかえません', silent=True)
+    else:
+        members = [m.mention for m in role.members]
+
+        if not members:
+            await interaction.followup.send(
+                '🤦‍♀️ 該当するメンバーがいませんでした',
+                ephemeral=True
+            )
+            return
+        
+        member_list = '\n'.join(members)
+        await interaction.followup.send(
+            f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
+            ephemeral=True,
+            silent=True
+        )
 
 
 ##### bot event functions #####
