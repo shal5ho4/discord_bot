@@ -40,11 +40,8 @@ async def list_no_role_members(interaction: discord.Interaction):
                 await interaction.followup.send("✅ 全員ロールあり！ヨシ！", silent=True)
                 return
             
-            # names = "\n".join(member.display_name for member in no_role_members)
             names = "\n".join(m.mention for m in no_role_members)
-            await interaction.followup.send(
-                f'👥ロールがついてない人\n{names}'
-            )
+            await interaction.followup.send(f'👥ロールがついてない人\n{names}')
         
         except Exception as e:
             print(repr(e))
@@ -62,22 +59,26 @@ async def list_role_members(
     if interaction.channel_id != CHANNEL_ID_MANAGE:
         await interaction.followup.send('❌ ここではつかえません', silent=True)
     else:
-        members = [member for member in role.members]
-        members.sort(key=lambda m: m.display_name.lower())
-        member_list = "\n".join(member.mention for member in members)
+        try:
+            members = [member for member in role.members]
+            members.sort(key=lambda m: m.display_name.lower())
+            member_list = "\n".join(member.mention for member in members)
 
-        if not members:
+            if not members:
+                await interaction.followup.send(
+                    '🤦‍♀️ 該当するメンバーがいませんでした',
+                    silent=True
+                )
+                return
+            
             await interaction.followup.send(
-                '🤦‍♀️ 該当するメンバーがいませんでした',
-                ephemeral=True
+                f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
+                silent=True
             )
-            return
-        
-        await interaction.followup.send(
-            f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
-            ephemeral=True,
-            silent=True
-        )
+
+        except Exception as e:
+            print(repr(e))
+            await interaction.followup.send('なにかがおかしいよ')
 
 
 ##### bot event functions #####
@@ -99,6 +100,9 @@ async def on_voice_state_update(
     before: discord.VoiceState,
     after:discord.VoiceState
 ):
+    """
+    send VC notifications
+    """
     try:
         if before.channel is None and after.channel is not None:
             voice_channel = after.channel
@@ -143,6 +147,30 @@ JST = timezone(timedelta(hours=+9), 'JST')
 def get_date_str() -> str:
     now = datetime.now(JST)
     return f'{now.month}月{now.day}日 {now.hour}時{now.minute}分'
+
+
+@bot.event
+async def on_member_join(member: discord.Member):
+    """
+    add the role to a newly joined member
+    """
+    if DEBUG:
+        role_id = ROLE_ID_TEST
+        channel_id = CHANNEL_ID_TEST_TX
+    else:
+        role_id = ROLE_ID_RISE
+        channel_id = CHANNEL_ID_MANAGE
+
+    role = member.guild.get_role(role_id)
+    channel = bot.get_channel(channel_id)
+    
+    if role and channel:
+        try:
+            await member.add_roles(role, reason='bot自動登録')
+            await channel.send(f'{member.mention} さんを {role.mention} に設定しました！')
+
+        except Exception as e:
+            print(repr(e))
 
 
 # @bot.event

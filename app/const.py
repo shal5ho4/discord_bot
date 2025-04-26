@@ -10,12 +10,15 @@ ENVIRONMENT = os.getenv('ENVIRONMENT')
 if not ENVIRONMENT or ENVIRONMENT != 'local':
     DEBUG = False
 
+# token
 TOKEN = os.getenv('BOT_TOKEN')
 TOKEN_TEST = os.getenv('BOT_TOKEN_TEST')
 
+# server
 SERVER_ID = int(os.getenv('SERVER_ID'))
 SERVER_ID_TEST = int(os.getenv('SERVER_ID_TEST'))
 
+# channels
 CHANNEL_ID_TEST_TX = int(os.getenv('CHANNEL_ID_TEST_TX'))
 CHANNEL_ID_TEST_VC = int(os.getenv('CHANNEL_ID_TEST_VC'))
 CHANNEL_ID_TEST_VC_2 = int(os.getenv('CHANNEL_ID_TEST_VC_2'))
@@ -52,6 +55,12 @@ TX_CHANNEL_IDS = {
     CHANNEL_ID_VC_OVER_3:           CHANNEL_ID_TX_OVER,
 }
 
+# roles
+ROLE_ID_TEST = int(os.getenv('ROLE_ID_TEST'))
+ROLE_ID_OVER = int(os.getenv('ROLE_ID_OVER'))
+ROLE_ID_RISE = int(os.getenv('ROLE_ID_RISE'))
+
+# messages
 MSG_WELCOME = """※botによる自動送信です※
 
 @member さん
