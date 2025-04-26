@@ -78,19 +78,29 @@ async def on_voice_state_update(
             print(f'send notification to → {text_channel.name}')
 
             if len(voice_channel.members) == 1:
+                # start notification
                 date = get_date_str()
                 message = await text_channel.send(
                     f"{date}\n🎧 <@{member.id}> が **<#{voice_channel.id}>** でボイスチャットを開始！"
                 )
                 active_voice_channels[voice_channel.id] = message.id
-            
-            elif len(voice_channel.members) == 0 and voice_channel.id in active_voice_channels:
-                date
-                await text_channel.send(
+        
+        elif before.channel is not None and after.channel is None:
+            voice_channel = before.channel
+            text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
+            text_channel = bot.get_channel(text_channel_id)
 
+            if len(voice_channel.members) == 0 and voice_channel.id in active_voice_channels:
+                # end notification
+                msg_id = active_voice_channels[voice_channel.id]
+                original_message = await text_channel.fetch_message(msg_id)
+
+                date = get_date_str()
+                await original_message.reply(
+                    f'{date}\nボイスチャットが終了しました。',
+                    silent=True
                 )
-
-            
+                active_voice_channels.pop(voice_channel.id)
 
     except Exception as e:
         print(repr(e))
