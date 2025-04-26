@@ -1,0 +1,64 @@
+import os
+import dotenv
+
+
+DEBUG = True
+# DEBUG = False
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+dotenv.load_dotenv(dotenv_path)
+
+TOKEN = os.getenv('BOT_TOKEN')
+TOKEN_TEST = os.getenv('BOT_TOKEN_TEST')
+
+SERVER_ID = int(os.getenv('SERVER_ID'))
+SERVER_ID_TEST = int(os.getenv('SERVER_ID_TEST'))
+
+CHANNEL_ID_TEST_TX = int(os.getenv('CHANNEL_ID_TEST_TX'))
+CHANNEL_ID_TEST_VC = int(os.getenv('CHANNEL_ID_TEST_VC'))
+CHANNEL_ID_TEST_VC_2 = int(os.getenv('CHANNEL_ID_TEST_VC_2'))
+
+CHANNEL_ID_TX_OVER_AND_RISE = int(os.getenv('CHANNEL_ID_TX_OVER_AND_RISE'))
+CHANNEL_ID_VC_OVER_AND_RISE = int(os.getenv('CHANNEL_ID_VC_OVER_AND_RISE'))
+CHANNEL_ID_VC_CAR_MEET = int(os.getenv('CHANNEL_ID_VC_CAR_MEET'))
+
+CHANNEL_ID_TX_RISE = int(os.getenv('CHANNEL_ID_TX_RISE'))
+CHANNEL_ID_VC_RISE = int(os.getenv('CHANNEL_ID_VC_RISE'))
+
+CHANNEL_ID_TX_OVER = int(os.getenv('CHANNEL_ID_TX_OVER'))
+CHANNEL_ID_VC_OVER = int(os.getenv('CHANNEL_ID_VC_OVER'))
+CHANNEL_ID_VC_OVER_2 = int(os.getenv('CHANNEL_ID_VC_OVER_2'))
+CHANNEL_ID_VC_OVER_3 = int(os.getenv('CHANNEL_ID_VC_OVER_3'))
+
+CHANNEL_ID_MANAGE = int(os.getenv('CHANNEL_ID_MANAGE'))
+
+TX_CHANNEL_IDS = {
+    # to test server
+    CHANNEL_ID_TEST_VC:             CHANNEL_ID_TEST_TX,
+    CHANNEL_ID_TEST_VC_2:           CHANNEL_ID_TEST_TX,
+
+    # to over and rise channel
+    CHANNEL_ID_VC_OVER_AND_RISE:    CHANNEL_ID_TX_OVER_AND_RISE,
+    CHANNEL_ID_VC_CAR_MEET:         CHANNEL_ID_TX_OVER_AND_RISE,
+
+    # to rise channel
+    CHANNEL_ID_VC_RISE:             CHANNEL_ID_TX_RISE,
+
+    # to over channel
+    CHANNEL_ID_VC_OVER:             CHANNEL_ID_TX_OVER,
+    CHANNEL_ID_VC_OVER_2:           CHANNEL_ID_TX_OVER,
+    CHANNEL_ID_VC_OVER_3:           CHANNEL_ID_TX_OVER,
+}
+
+MSG_WELCOME = """※botによる自動送信です※
+
+@member さん
+OVER & RISE クルーのDiscordサーバーへようこそ😊
+
+Discordでのメンバーを管理しやすくするため、
+サーバー内の表示名をPSIDと合わせていただけると
+大変助かります。
+
+下のボタンにPSIDを入力すると、自動で反映されます。
+ご協力よろしくお願いいたします🙇‍♂️
+"""

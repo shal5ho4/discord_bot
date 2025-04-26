@@ -1,53 +1,11 @@
-import os
 from datetime import datetime, timezone, timedelta
 
-import dotenv
 import discord
 from discord.ext import commands
 
+from const import *
+from modal import RegisterView
 # from server import server_thread
-
-
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-dotenv.load_dotenv(dotenv_path)
-
-TOKEN = os.getenv('BOT_TOKEN')
-
-CHANNEL_ID_TEST_TX = int(os.getenv('CHANNEL_ID_TEST_TX'))
-CHANNEL_ID_TEST_VC = int(os.getenv('CHANNEL_ID_TEST_VC'))
-CHANNEL_ID_TEST_VC_2 = int(os.getenv('CHANNEL_ID_TEST_VC_2'))
-
-CHANNEL_ID_TX_OVER_AND_RISE = int(os.getenv('CHANNEL_ID_TX_OVER_AND_RISE'))
-CHANNEL_ID_VC_OVER_AND_RISE = int(os.getenv('CHANNEL_ID_VC_OVER_AND_RISE'))
-CHANNEL_ID_VC_CAR_MEET = int(os.getenv('CHANNEL_ID_VC_CAR_MEET'))
-
-CHANNEL_ID_TX_RISE = int(os.getenv('CHANNEL_ID_TX_RISE'))
-CHANNEL_ID_VC_RISE = int(os.getenv('CHANNEL_ID_VC_RISE'))
-
-CHANNEL_ID_TX_OVER = int(os.getenv('CHANNEL_ID_TX_OVER'))
-CHANNEL_ID_VC_OVER = int(os.getenv('CHANNEL_ID_VC_OVER'))
-CHANNEL_ID_VC_OVER_2 = int(os.getenv('CHANNEL_ID_VC_OVER_2'))
-CHANNEL_ID_VC_OVER_3 = int(os.getenv('CHANNEL_ID_VC_OVER_3'))
-
-CHANNEL_ID_MANAGE = int(os.getenv('CHANNEL_ID_MANAGE'))
-
-TX_CHANNEL_IDS = {
-    # to test server
-    CHANNEL_ID_TEST_VC:             CHANNEL_ID_TEST_TX,
-    CHANNEL_ID_TEST_VC_2:           CHANNEL_ID_TEST_TX,
-
-    # to over and rise channel
-    CHANNEL_ID_VC_OVER_AND_RISE:    CHANNEL_ID_TX_OVER_AND_RISE,
-    CHANNEL_ID_VC_CAR_MEET:         CHANNEL_ID_TX_OVER_AND_RISE,
-
-    # to rise channel
-    CHANNEL_ID_VC_RISE:             CHANNEL_ID_TX_RISE,
-
-    # to over channel
-    CHANNEL_ID_VC_OVER:             CHANNEL_ID_TX_OVER,
-    CHANNEL_ID_VC_OVER_2:           CHANNEL_ID_TX_OVER,
-    CHANNEL_ID_VC_OVER_3:           CHANNEL_ID_TX_OVER,
-}
 
 
 intents = discord.Intents.default()
@@ -89,7 +47,7 @@ async def list_no_role_members(interaction: discord.Interaction):
         
         except Exception as e:
             print(repr(e))
-            await interaction.followup.send('なにかがおかしいよ')##### bot commands #####
+            await interaction.followup.send('なにかがおかしいよ')
 
 
 ##### bot event functions #####
@@ -118,7 +76,7 @@ async def on_voice_state_update(
             if len(voice_channel.members) == 1 and text_channel:
                 date = get_date_str()
                 await text_channel.send(
-                    f"{date}\n🎧 <@{member.id}> が **{voice_channel.name}** でボイスチャットを開始！"
+                    f"{date}\n🎧 <@{member.id}> が <#{voice_channel.id}> でボイスチャットを開始！"
                 )
 
     except Exception as e:
@@ -134,5 +92,18 @@ def get_date_str() -> str:
     return f'{now.month}月{now.day}日 {now.hour}時{now.minute}分'
 
 
+# @bot.event
+# async def on_member_join(member: discord.Member):
+#     try:
+#         message = MSG_WELCOME.replace('@member', member.display_name)
+#         await member.send(message, view=RegisterView())
+
+#     except discord.Forbidden:
+#         print(f'on_member_join: Could not send the message to {member.display_name}')
+
+
 if __name__ == '__main__':
-    bot.run(TOKEN)
+    if DEBUG:
+        bot.run(TOKEN_TEST)
+    else:
+        bot.run(TOKEN)
