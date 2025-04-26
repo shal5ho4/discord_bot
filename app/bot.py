@@ -73,7 +73,6 @@ async def list_role_members(
             )
             return
         
-        member_list = '\n'.join(members)
         await interaction.followup.send(
             f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
             ephemeral=True,
