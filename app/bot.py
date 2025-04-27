@@ -1,4 +1,4 @@
-import traceback
+import inspect
 from datetime import datetime, timezone, timedelta
 
 import discord
@@ -22,15 +22,15 @@ tree = bot.tree
 ##### bot commands #####
 @tree.command(name='henlo', description='Say hello')
 async def hello_command(interaction: discord.Interaction):
-    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!', silent=True)
+    await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!', ephemeral=True)
 
 
 @tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
 async def list_no_role_members(interaction: discord.Interaction):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
-    if interaction.channel_id != CHANNEL_ID_MANAGE:
-        await interaction.followup.send('❌ ここではつかえません', silent=True)
+    if interaction.channel_id not in COMMAND_WHITE_LIST:
+        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
     else:
         try:
             guild = interaction.guild
@@ -45,7 +45,7 @@ async def list_no_role_members(interaction: discord.Interaction):
             await interaction.followup.send(f'👥ロールがついてない人\n{names}')
         
         except Exception as e:
-            await send_error_log(e, list_no_role_members.__name__)
+            await send_error_log(e, inspect.currentframe().f_code.co_name)
 
         finally:
             await interaction.followup.send('なにかがおかしいよ')
@@ -57,10 +57,10 @@ async def list_role_members(
     interaction: discord.Interaction,
     role: discord.Role
 ):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
-    if interaction.channel_id != CHANNEL_ID_MANAGE:
-        await interaction.followup.send('❌ ここではつかえません', silent=True)
+    if interaction.channel_id not in COMMAND_WHITE_LIST:
+        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
     else:
         try:
             members = [member for member in role.members]
@@ -70,17 +70,18 @@ async def list_role_members(
             if not members:
                 await interaction.followup.send(
                     '🤦‍♀️ 該当するメンバーがいませんでした',
-                    silent=True
+                    ephemeral=True
                 )
                 return
             
             await interaction.followup.send(
                 f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
-                silent=True
+                ephemeral=True
             )
+            raise ValueError
 
         except Exception as e:
-            await send_error_log(e, list_role_members.__name__)
+            await send_error_log(e, inspect.currentframe().f_code.co_name)
 
         finally:
             await interaction.followup.send('なにかがおかしいよ')
@@ -142,7 +143,7 @@ async def on_voice_state_update(
                 active_voice_channels.pop(voice_channel.id)
 
     except Exception as e:
-        await send_error_log(e, on_voice_state_update.__name__)
+        await send_error_log(e, inspect.currentframe().f_code.co_name)
 
 
 JST = timezone(timedelta(hours=+9), 'JST')
@@ -173,7 +174,7 @@ async def on_member_join(member: discord.Member):
             # await channel.send(f'{member.mention} さんを {role.mention} に設定しました！')
 
         except Exception as e:
-            await send_error_log(e, on_member_join.__name__)
+            await send_error_log(e, inspect.currentframe().f_code.co_name)
 
 
 # @bot.event
@@ -188,7 +189,7 @@ async def on_member_join(member: discord.Member):
 
 async def send_error_log(e: Exception, func_name: str = None):
     channel = bot.get_channel(CHANNEL_ID_TEST_TX)
-    message =f'Function: {func_name}\nStacktrace:\n```{(repr(e))}```'
+    message =f'Function:{func_name}\nStacktrace:\n```{(repr(e))}```'
     await channel.send(message)
 
 

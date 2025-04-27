@@ -57,6 +57,11 @@ TX_CHANNEL_IDS = {
     CHANNEL_ID_VC_OVER_3:           CHANNEL_ID_TX_OVER,
 }
 
+COMMAND_WHITE_LIST = (
+    CHANNEL_ID_MANAGE,
+    CHANNEL_ID_TEST_TX,
+)
+
 # roles
 ROLE_ID_TEST = int(os.getenv('ROLE_ID_TEST'))
 ROLE_ID_OVER = int(os.getenv('ROLE_ID_OVER'))
