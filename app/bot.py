@@ -1,3 +1,4 @@
+import traceback
 from datetime import datetime, timezone, timedelta
 
 import discord
@@ -44,7 +45,9 @@ async def list_no_role_members(interaction: discord.Interaction):
             await interaction.followup.send(f'👥ロールがついてない人\n{names}')
         
         except Exception as e:
-            print(repr(e))
+            await send_error_log(e, list_no_role_members.__name__)
+
+        finally:
             await interaction.followup.send('なにかがおかしいよ')
 
 
@@ -77,7 +80,9 @@ async def list_role_members(
             )
 
         except Exception as e:
-            print(repr(e))
+            await send_error_log(e, list_role_members.__name__)
+
+        finally:
             await interaction.followup.send('なにかがおかしいよ')
 
 
@@ -137,9 +142,7 @@ async def on_voice_state_update(
                 active_voice_channels.pop(voice_channel.id)
 
     except Exception as e:
-        print(repr(e))
-        text_channel = bot.get_channel(CHANNEL_ID_TEST_TX)
-        await text_channel.send(e)
+        await send_error_log(e, on_voice_state_update.__name__)
 
 
 JST = timezone(timedelta(hours=+9), 'JST')
@@ -156,21 +159,21 @@ async def on_member_join(member: discord.Member):
     """
     if DEBUG:
         role_id = ROLE_ID_TEST
-        channel_id = CHANNEL_ID_TEST_TX
+        # channel_id = CHANNEL_ID_TEST_TX
     else:
         role_id = ROLE_ID_RISE
-        channel_id = CHANNEL_ID_MANAGE
+        # channel_id = CHANNEL_ID_MANAGE
 
     role = member.guild.get_role(role_id)
-    channel = bot.get_channel(channel_id)
+    # channel = bot.get_channel(channel_id)
     
-    if role and channel:
+    if role:
         try:
             await member.add_roles(role, reason='bot自動登録')
-            await channel.send(f'{member.mention} さんを {role.mention} に設定しました！')
+            # await channel.send(f'{member.mention} さんを {role.mention} に設定しました！')
 
         except Exception as e:
-            print(repr(e))
+            await send_error_log(e, on_member_join.__name__)
 
 
 # @bot.event
@@ -181,6 +184,12 @@ async def on_member_join(member: discord.Member):
 
 #     except discord.Forbidden:
 #         print(f'on_member_join: Could not send the message to {member.display_name}')
+
+
+async def send_error_log(e: Exception, func_name: str = None):
+    channel = bot.get_channel(CHANNEL_ID_TEST_TX)
+    message =f'Function: {func_name}\nStacktrace:\n```{(repr(e))}```'
+    await channel.send(message)
 
 
 if __name__ == '__main__':

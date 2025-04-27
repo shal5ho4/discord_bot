@@ -7,8 +7,10 @@ dotenv.load_dotenv(dotenv_path)
 
 DEBUG = True
 ENVIRONMENT = os.getenv('ENVIRONMENT')
-if not ENVIRONMENT or ENVIRONMENT != 'local':
+if ENVIRONMENT and ENVIRONMENT == 'koyeb':
     DEBUG = False
+
+print(f'DEBUG = {DEBUG}')
 
 # token
 TOKEN = os.getenv('BOT_TOKEN')
