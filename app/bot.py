@@ -46,9 +46,7 @@ async def list_no_role_members(interaction: discord.Interaction):
         
         except Exception as e:
             await send_error_log(e, inspect.currentframe().f_code.co_name)
-
-        finally:
-            await interaction.followup.send('なにかがおかしいよ')
+            interaction.followup.send('なにかがおかしいよ')
 
 
 @tree.command(name='role-member-list', description='ロールごとのメンバーを教えてくれます。')
@@ -78,12 +76,9 @@ async def list_role_members(
                 f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
                 ephemeral=True
             )
-            raise ValueError
 
         except Exception as e:
             await send_error_log(e, inspect.currentframe().f_code.co_name)
-
-        finally:
             await interaction.followup.send('なにかがおかしいよ')
 
 
