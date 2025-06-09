@@ -6,7 +6,7 @@ from parser import ArticleParser, ArticleListParser
 from settings import *
 
 
-def lambda_handler(event=None, context=None):
+def lambda_handler(event:dict={}, context=None):
     is_test = event.get('test', False)
     status = 200
     body = '✅ Update check complete'
@@ -31,6 +31,9 @@ def lambda_handler(event=None, context=None):
         print(repr(e))
     
     if message:
+        add_message = event.get('add_message')
+        if add_message:
+            message = f'{add_message}\n' + message
         if status != 200 or is_test:
             webhook_url = WEBHOOK_URL_DEBUG
         else:
@@ -57,7 +60,10 @@ def send_discord_webhook(webhook_url: str, message: str):
 
 
 if __name__ == '__main__':
-    event = {'test': True}
+    event = {
+        'test': True,
+        'add_message': '※ 6/9修正版'
+    }
     lambda_handler(event)
 
 

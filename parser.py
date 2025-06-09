@@ -31,6 +31,7 @@ BOOSTED_JOB_TITLE = '報酬アップ'
 class Parser:
     def __init__(self, url: str):
         self.url: str = url
+        print(f'self.url = {self.url}')
         self.parser: BeautifulSoup = None
         self.get_http()
 
@@ -83,7 +84,7 @@ class ArticleParser(Parser):
         topic_lines = '\n'.join([f"●{topic}" for topic in topics])
 
         boosted_jobs = self._get_boosted_jobs()
-        boosted_job_lines = '\n'.join([f"・{job}" for job in boosted_jobs])
+        boosted_job_lines = '\n'.join([job for job in boosted_jobs])
 
         message = f"""🎈 {date}
 🆕今週の週アップデート速報🆕
@@ -132,20 +133,31 @@ class ArticleParser(Parser):
             return None
         
         boosted_jobs = []
-        current_line = ''
 
-        for elem in p.children:
-            if elem.name == 'br':
-                if current_line.strip():
-                    boosted_jobs.append(current_line.strip())
-                current_line = ""
-            elif elem.name == 'span':
-                current_line += f"  {elem.get_text()}"
-            elif isinstance(elem, str):
-                current_line += elem.strip()
-        
-        if current_line.strip():
-            boosted_jobs.append(current_line.strip())
+        if len(list(p.children)) > 1:
+            current_line = ''
+            for elem in p.children:
+                if elem.name == 'br':
+                    if current_line.strip():
+                        boosted_jobs.append(f'●{current_line.strip()}')
+                    current_line = ''
+                elif elem.name == 'span':
+                    current_line += f"  {elem.get_text()}"
+                elif isinstance(elem, str):
+                    current_line += elem.strip()
+            
+            if current_line.strip():
+                boosted_jobs.append(f'●{current_line.strip()}')
+
+        else:
+            boost = p.get_text()
+            while '■' in boost:
+                boosted_jobs.append(boost)
+                ul = p.find_next_sibling('ul', class_='m0-t')
+                for li in ul.find_all('li'):
+                    boosted_jobs.append(f'●{li.get_text()}')
+                p = p.find_next_sibling('p')
+                boost = p.get_text()
 
         return boosted_jobs
 
@@ -157,5 +169,7 @@ if __name__ == '__main__':
     print(f'parser.title = {list_parser.title}')
     print(f'parser.link = {list_parser.link}')
 
-    article_parser = ArticleParser(list_parser.link)
-    message = article_parser.get_notification_message()
+    # article_parser = ArticleParser(list_parser.link)
+    # article_parser = ArticleParser('https://gta5-madara.com/weekly20250605/')
+    # article_parser = ArticleParser('https://gta5-madara.com/weekly20240912/')
+    # message = article_parser.get_notification_message()
