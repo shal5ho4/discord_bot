@@ -178,13 +178,14 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
     """
     send event-created notification
     """
-    print('event detected.')
+    if event.guild_id == SERVER_ID:
+        channel_id = CHANNEL_ID_OSHIRASE
+    else:
+        channel_id = CHANNEL_ID_TEST_TX
 
-    channel_id = CHANNEL_ID_TEST_TX if DEBUG else CHANNEL_ID_OSHIRASE
     channel = bot.get_channel(channel_id)
-
     content = f'<@{event.creator_id}> がイベントを作成しました📝\n{event.url}'
-    
+
     await channel.send(content=content)
 
 
