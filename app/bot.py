@@ -13,6 +13,7 @@ from modal import RegisterView
 intents = discord.Intents.default()
 intents.voice_states = True
 intents.guilds = True
+intents.guild_scheduled_events = True
 intents.members = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -170,6 +171,21 @@ async def on_member_join(member: discord.Member):
 
         except Exception as e:
             await send_error_log(e, inspect.currentframe().f_code.co_name)
+
+
+@bot.event
+async def on_scheduled_event_create(event: discord.ScheduledEvent):
+    """
+    send event-created notification
+    """
+    print('event detected.')
+
+    channel_id = CHANNEL_ID_TEST_TX if DEBUG else CHANNEL_ID_OSHIRASE
+    channel = bot.get_channel(channel_id)
+
+    content = f'<@{event.creator_id}> がイベントを作成しました📝\n{event.url}'
+    
+    await channel.send(content=content)
 
 
 # @bot.event
