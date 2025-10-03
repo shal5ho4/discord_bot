@@ -128,7 +128,7 @@ def get_inactive_members() -> list[tuple[int, str]]:
 
     for member_id, timestamp in join_record.items():
         if timestamp:
-            joined_date = datetime.strptime(timestamp, '%Y-%m-%d')
+            joined_date = datetime.strptime(timestamp, '%Y-%m-%d').replace(tzinfo=JST)
             delta = datetime.now(JST) - joined_date
             # if delta.days >= 3:
             days_ago = f'{delta.days}日前 ({timestamp})'
