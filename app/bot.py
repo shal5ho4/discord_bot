@@ -122,6 +122,17 @@ def remove_join_record(member_id: int):
     print(f'member_id "{member_id}" removed.')
 
 
+def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]:
+    def sort_key(item):
+        _, days_info = item
+        if days_info == 'N/A':
+            return (0, 0)
+        days = int(days_info.split('日前')[0])
+        return (1, -days)
+
+    return sorted(members, key=sort_key)
+
+
 def get_inactive_members() -> list[tuple[int, str]]:
     join_record = load_join_record()
     inactive_members = []
@@ -136,12 +147,12 @@ def get_inactive_members() -> list[tuple[int, str]]:
             days_ago = 'N/A'
         inactive_members.append((int(member_id), days_ago))
     
-    return inactive_members
+    return sort_joined_members(inactive_members)
 
 
 scheduler = AsyncIOScheduler()
 
-@scheduler.scheduled_job(CronTrigger(minute=30, timezone='Asia/Tokyo'))
+@scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
 async def join_record_reminder():
     """
     send join record(weekly)
@@ -297,14 +308,15 @@ async def on_ready():
         
         join_record = {}
         for member in role_members:
-            join_record[str(member.id)] = None
+            if not member.id in JOIN_RECORD_WHITE_LIST:
+                join_record[str(member.id)] = None
 
         with open(JOIN_RECORD, 'w', encoding='utf-8') as f:
             json.dump(join_record, f)
         print(f'created join_record as : {join_record}')
 
     global record_start_at
-    record_start_at = datetime.now(JST).strftime('%Y/%m/%d')
+    record_start_at = datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')
     print(f'join_record_start_at: {record_start_at}')
 
 
