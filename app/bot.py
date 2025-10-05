@@ -88,9 +88,6 @@ async def list_role_members(
 
 
 ##### bot event functions #####
-
-JOIN_RECORD = Path('join_record.json')  # {"member_id": "timestamp" | null}
-
 def get_db_connection():
     return psycopg2.connect(
         host=DATABASE_HOST,
@@ -186,7 +183,7 @@ def get_inactive_members() -> list[tuple[int, str]]:
 
 scheduler = AsyncIOScheduler()
 
-@scheduler.scheduled_job(CronTrigger(second=1, timezone='Asia/Tokyo'))
+@scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
 async def join_record_reminder():
     """
     send join record(weekly)
