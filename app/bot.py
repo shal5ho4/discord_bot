@@ -1,9 +1,11 @@
 import discord
 import inspect
 import json
+import psycopg2
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timezone, timedelta
+from datetime import date as datetime_date
 from discord.ext import commands
 from pathlib import Path
 
@@ -88,38 +90,72 @@ async def list_role_members(
 ##### bot event functions #####
 
 JOIN_RECORD = Path('join_record.json')  # {"member_id": "timestamp" | null}
-record_start_at = ''
 
-def load_join_record() -> dict:
-    if JOIN_RECORD.exists():
-        with open(JOIN_RECORD, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+def get_db_connection():
+    return psycopg2.connect(
+        host=DATABASE_HOST,
+        user=DATABASE_USER,
+        password=DATABASE_PASSWORD,
+        dbname=DATABASE_NAME,
+        port=5432
+    )
+
+
+def get_join_record() -> list[tuple, datetime_date|None]:
+    join_record = []
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(SQL_SELECT_RECORD)
+                result = cursor.fetchall()
+        
+        for member_id, date in result:
+            if date:
+                date: datetime_date
+                date_str = date.strftime('%Y/%m/%d')
+            else:
+                date_str = None
+            join_record.append((member_id, date_str))
+
+    except Exception as e:
+        print(repr(e))
+
+    return join_record
 
 
 def update_join_record(member_id: int, date_null=False):
-    join_record = load_join_record()
-
     if date_null:
         date = None
     else:
-        date = datetime.now(JST).strftime('%Y-%m-%d')
+        date = datetime.now(JST).date()
 
-    join_record[str(member_id)] = date
-    print(join_record)
-
-    with open(JOIN_RECORD, 'w', encoding='utf-8') as f:
-        json.dump(join_record, f, ensure_ascii=False, indent=2)
-    print('join record saved.')
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            if date:
+                cursor.execute(
+                    SQL_INSERT_WITH_DATE,
+                    (member_id, date)
+                )
+                print(f'SQL: {SQL_INSERT_WITH_DATE}\nmember_id: {member_id}, date: {date}')
+            else:
+                cursor.execute(
+                    SQL_INSERT_WITHOUT_DATE,
+                    (member_id,)
+                )
+                print(f'SQL: {SQL_INSERT_WITHOUT_DATE}\nmember_id: {member_id}, date: NULL')
+            conn.commit()
 
 
 def remove_join_record(member_id: int):
-    join_record = load_join_record()
-    join_record.pop(str(member_id))
-
-    with open(JOIN_RECORD, 'w', encoding='utf-8') as f:
-        json.dump(join_record, f, ensure_ascii=False, indent=2)
-    print(f'member_id "{member_id}" removed.')
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                SQL_DELETE_RECORD,
+                (member_id,)
+            )
+            print(f'SQL: {SQL_DELETE_RECORD}\nmember_id: {member_id}')
+        conn.commit()
 
 
 def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]:
@@ -134,15 +170,13 @@ def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]
 
 
 def get_inactive_members() -> list[tuple[int, str]]:
-    join_record = load_join_record()
+    join_record = get_join_record()
     inactive_members = []
 
-    for member_id, timestamp in join_record.items():
-        if timestamp:
-            joined_date = datetime.strptime(timestamp, '%Y-%m-%d').replace(tzinfo=JST)
-            delta = datetime.now(JST) - joined_date
-            # if delta.days >= 3:
-            days_ago = f'{delta.days}日前 ({timestamp})'
+    for member_id, date in join_record:
+        if date:
+            delta = datetime.now(JST) - datetime.strptime(date, '%Y/%m/%d').replace(tzinfo=JST)
+            days_ago = f'{delta.days}日前 ({date})'
         else:
             days_ago = 'N/A'
         inactive_members.append((int(member_id), days_ago))
@@ -152,20 +186,18 @@ def get_inactive_members() -> list[tuple[int, str]]:
 
 scheduler = AsyncIOScheduler()
 
-@scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
+@scheduler.scheduled_job(CronTrigger(second=1, timezone='Asia/Tokyo'))
 async def join_record_reminder():
     """
     send join record(weekly)
     """
-    global record_start_at
-
     inactive_members = get_inactive_members()
     list_str = ''
     for t in inactive_members:
         member_id, days_ago = t
         list_str += f'<@{member_id}>: {days_ago}\n'
 
-    message = f'record_start_at: {record_start_at}\nget_inactive_members():\n{list_str}'
+    message = f'対象メンバー:\n{list_str}'
 
     channel_id = CHANNEL_ID_TEST_TX if DEBUG else CHANNEL_ID_MANAGE_2
     channel = bot.get_channel(channel_id)
@@ -219,7 +251,7 @@ async def on_voice_state_update(
         
         target_role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
         has_target_role = any(role.id == target_role_id for role in member.roles)
-        if has_target_role:
+        if has_target_role and member.id not in JOIN_RECORD_WHITE_LIST:
             update_join_record(member.id)
 
     except Exception as e:
@@ -243,10 +275,9 @@ async def on_member_join(member: discord.Member):
     if role:
         try:
             await member.add_roles(role, reason='bot自動登録')
+            update_join_record(member.id, date_null=True)
         except Exception as e:
             await send_error_log(e, inspect.currentframe().f_code.co_name)
-
-    update_join_record(member.id, date_null=True)
 
 
 @bot.event
@@ -254,7 +285,10 @@ async def on_member_remove(member: discord.Member):
     """
     remove member.id from join_record
     """
-    remove_join_record(member.id)
+    try:
+        remove_join_record(member.id)
+    except Exception as e:
+        await send_error_log(e, inspect.currentframe().f_code.co_name)
 
 
 @bot.event
@@ -294,30 +328,10 @@ async def on_ready():
     """
     bot start-up
     """
-    print(f'Logged in as {bot.user}')
     await tree.sync()
+    print(f'Logged in as {bot.user}')
 
     scheduler.start()
-    
-    if not JOIN_RECORD.exists():
-        print('creating join_record...')
-
-        guild = bot.get_guild(SERVER_ID)
-        role = discord.utils.get(guild.roles, name="RISE")
-        role_members = [member for member in guild.members if role in member.roles]
-        
-        join_record = {}
-        for member in role_members:
-            if not member.id in JOIN_RECORD_WHITE_LIST:
-                join_record[str(member.id)] = None
-
-        with open(JOIN_RECORD, 'w', encoding='utf-8') as f:
-            json.dump(join_record, f)
-        print(f'created join_record as : {join_record}')
-
-    global record_start_at
-    record_start_at = datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')
-    print(f'join_record_start_at: {record_start_at}')
 
 
 

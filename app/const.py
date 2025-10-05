@@ -12,6 +12,37 @@ if ENVIRONMENT and ENVIRONMENT == 'koyeb':
 
 print(f'DEBUG = {DEBUG}')
 
+# database
+DATABASE_HOST = os.getenv('DATABASE_HOST')
+DATABASE_USER = os.getenv('DATABASE_USER')
+DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
+DATABASE_NAME = os.getenv('DATABASE_NAME')
+
+SQL_CREATE_TABLE = '''
+    CREATE TABLE join_records (
+        user_id BIGINT PRIMARY KEY,
+        joined_date DATE
+    );
+'''
+SQL_SELECT_RECORD = '''
+    SELECT user_id, joined_date FROM join_records
+'''
+SQL_INSERT_WITH_DATE = '''
+    INSERT INTO join_records (user_id, joined_date)
+    VALUES (%s, %s)
+    ON CONFLICT (user_id) DO UPDATE
+    SET joined_date = EXCLUDED.joined_date;
+'''
+SQL_INSERT_WITHOUT_DATE = '''
+    INSERT INTO join_records (user_id, joined_date)
+    VALUES (%s, NULL)
+    ON CONFLICT (user_id) DO UPDATE
+    SET joined_date = NULL;
+'''
+SQL_DELETE_RECORD = '''
+    DELETE FROM join_records WHERE user_id = %s
+'''
+
 # token
 TOKEN = os.getenv('BOT_TOKEN')
 TOKEN_TEST = os.getenv('BOT_TOKEN_TEST')
@@ -75,6 +106,5 @@ JOIN_RECORD_WHITE_LIST = (
     1363358365346037974,
     1363827906643628153,
     1365001405412282540,
-    1083783797931253860,
-    1363524573953527948
+    1083783797931253860
 )
