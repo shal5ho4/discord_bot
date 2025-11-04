@@ -87,6 +87,55 @@ async def list_role_members(
             await interaction.followup.send('なにかがおかしいよ')
 
 
+@tree.command(name='get-join-record', description='ユーザーIDを使用して参加記録を取得します。')
+@discord.app_commands.describe(member_id='ユーザーIDを入力')
+async def get_join_record_command(
+    interaction: discord.Interaction,
+    member_id: str
+):
+    await interaction.response.defer(thinking=True)
+
+    if interaction.channel_id not in COMMAND_WHITE_LIST:
+        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
+        return
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute('SELECT * FROM join_records WHERE user_id = %s;', (member_id,))
+                result = cursor.fetchone()
+        
+        if result:
+            await interaction.followup.send(f'GET: {member_id}\n完了しました。\n{result}')
+        else:
+            await interaction.followup.send(f'GET: {member_id}\n対象レコードがありません。')
+    
+    except Exception as e:
+        await interaction.followup.send(f'ERROR: {member_id}\n{repr(e)}')
+
+
+@tree.command(name='remove-join-record', description='ユーザーIDを使用して参加記録を削除します。')
+@discord.app_commands.describe(member_id='ユーザーIDを入力')
+async def remove_join_record_command(
+    interaction: discord.Interaction,
+    member_id: str
+):
+    await interaction.response.defer(thinking=True)
+
+    if interaction.channel_id not in COMMAND_WHITE_LIST:
+        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
+        return
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute('DELETE FROM join_records WHERE user_id = %s;', (member_id,))
+        await interaction.followup.send(f'DELETE: {member_id}\n完了しました。')
+    
+    except Exception as e:
+        await interaction.followup.send(f'ERROR: {member_id}\n{repr(e)}')
+
+
 ##### bot event functions #####
 def get_db_connection():
     return psycopg2.connect(
@@ -186,7 +235,7 @@ scheduler = AsyncIOScheduler()
 @scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
 async def join_record_reminder():
     """
-    send join record(weekly)
+    send join record(daily)
     """
     inactive_members = get_inactive_members()
     list_str = ''
@@ -269,7 +318,7 @@ async def on_member_join(member: discord.Member):
     role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
     role = member.guild.get_role(role_id)
 
-    if role:
+    if role and member.id not in JOIN_RECORD_WHITE_LIST:
         try:
             await member.add_roles(role, reason='bot自動登録')
             update_join_record(member.id, date_null=True)
