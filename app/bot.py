@@ -242,7 +242,7 @@ def get_inactive_members() -> list[tuple[int, str]]:
 
 scheduler = AsyncIOScheduler()
 
-@scheduler.scheduled_job(CronTrigger(second=0, timezone='Asia/Tokyo'))
+@scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
 async def join_record_reminder():
     """
     send join record(daily)
