@@ -19,28 +19,28 @@ DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
 DATABASE_NAME = os.getenv('DATABASE_NAME')
 
 SQL_CREATE_TABLE = '''
-    CREATE TABLE join_records (
+    CREATE TABLE join_record (
         user_id BIGINT PRIMARY KEY,
         joined_date DATE
     );
 '''
 SQL_SELECT_RECORD = '''
-    SELECT user_id, joined_date FROM join_records
+    SELECT user_id, joined_date FROM join_record
 '''
 SQL_INSERT_WITH_DATE = '''
-    INSERT INTO join_records (user_id, joined_date)
+    INSERT INTO join_record (user_id, joined_date)
     VALUES (%s, %s)
     ON CONFLICT (user_id) DO UPDATE
     SET joined_date = EXCLUDED.joined_date;
 '''
 SQL_INSERT_WITHOUT_DATE = '''
-    INSERT INTO join_records (user_id, joined_date)
+    INSERT INTO join_record (user_id, joined_date)
     VALUES (%s, NULL)
     ON CONFLICT (user_id) DO UPDATE
     SET joined_date = NULL;
 '''
 SQL_DELETE_RECORD = '''
-    DELETE FROM join_records WHERE user_id = %s
+    DELETE FROM join_record WHERE user_id = %s
 '''
 
 # token
@@ -73,6 +73,7 @@ CHANNEL_ID_VC_OVER_3 = int(os.getenv('CHANNEL_ID_VC_OVER_3'))
 CHANNEL_ID_MANAGE = int(os.getenv('CHANNEL_ID_MANAGE'))
 CHANNEL_ID_MANAGE_2 = int(os.getenv('CHANNEL_ID_MANAGE_2'))
 CHANNEL_ID_OSHIRASE = int(os.getenv('CHANNEL_ID_OSHIRASE'))
+CHANNEL_ID_LOG = int(os.getenv('CHANNEL_ID_LOG'))
 
 TX_CHANNEL_IDS = {
     # to test server
@@ -106,13 +107,4 @@ ROLE_ID_OVER = int(os.getenv('ROLE_ID_OVER'))
 ROLE_ID_RISE = int(os.getenv('ROLE_ID_RISE'))
 
 # voice join record
-JOIN_RECORD_WHITE_LIST = (
-    981396359489929257,
-    1363358365346037974,
-    1363827906643628153,
-    1365001405412282540,
-    1083783797931253860,
-    1432855520078860459,
-    1432872091610386546,
-    1432875321207816376
-)
+# JOIN_RECORD_WHITE_LIST = ()

@@ -2,12 +2,14 @@ import discord
 import inspect
 import json
 import psycopg2
+import traceback
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timezone, timedelta
 from datetime import date as datetime_date
 from discord.ext import commands
 from pathlib import Path
+from psycopg2 import pool
 
 from const import *
 # from modal import RegisterView
@@ -30,61 +32,61 @@ async def hello_command(interaction: discord.Interaction):
     await interaction.response.send_message(f'👋 Hello, {interaction.user.display_name}!', ephemeral=True)
 
 
-@tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
-async def list_no_role_members(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
+# @tree.command(name='no-role', description='ロールがついてない人を教えてくれます。')
+# async def list_no_role_members(interaction: discord.Interaction):
+#     await interaction.response.defer(ephemeral=True)
 
-    if interaction.channel_id not in COMMAND_WHITE_LIST:
-        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
-    else:
-        try:
-            guild = interaction.guild
-            members = [m async for m in guild.fetch_members(limit=None)]
-            no_role_members = [m for m in members if len(m.roles) == 1]
+#     if interaction.channel_id not in COMMAND_WHITE_LIST:
+#         await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
+#     else:
+#         try:
+#             guild = interaction.guild
+#             members = [m async for m in guild.fetch_members(limit=None)]
+#             no_role_members = [m for m in members if len(m.roles) == 1]
 
-            if not no_role_members:
-                await interaction.followup.send("✅ 全員ロールあり！ヨシ！", silent=True)
-                return
+#             if not no_role_members:
+#                 await interaction.followup.send("✅ 全員ロールあり！ヨシ！", silent=True)
+#                 return
             
-            names = "\n".join(m.mention for m in no_role_members)
-            await interaction.followup.send(f'👥ロールがついてない人\n{names}')
+#             names = "\n".join(m.mention for m in no_role_members)
+#             await interaction.followup.send(f'👥ロールがついてない人\n{names}')
         
-        except Exception as e:
-            await send_error_log(e, inspect.currentframe().f_code.co_name)
-            interaction.followup.send('なにかがおかしいよ')
+#         except Exception as e:
+#             await send_error_log(e, inspect.currentframe().f_code.co_name)
+#             interaction.followup.send('なにかがおかしいよ')
 
 
-@tree.command(name='role-member-list', description='ロールごとのメンバーを教えてくれます。')
-@discord.app_commands.describe(role='ロールを選択！')
-async def list_role_members(
-    interaction: discord.Interaction,
-    role: discord.Role
-):
-    await interaction.response.defer(ephemeral=True)
+# @tree.command(name='role-member-list', description='ロールごとのメンバーを教えてくれます。')
+# @discord.app_commands.describe(role='ロールを選択！')
+# async def list_role_members(
+#     interaction: discord.Interaction,
+#     role: discord.Role
+# ):
+#     await interaction.response.defer(ephemeral=True)
 
-    if interaction.channel_id not in COMMAND_WHITE_LIST:
-        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
-    else:
-        try:
-            members = [member for member in role.members]
-            members.sort(key=lambda m: m.display_name.lower())
-            member_list = "\n".join(member.mention for member in members)
+#     if interaction.channel_id not in COMMAND_WHITE_LIST:
+#         await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
+#     else:
+#         try:
+#             members = [member for member in role.members]
+#             members.sort(key=lambda m: m.display_name.lower())
+#             member_list = "\n".join(member.mention for member in members)
 
-            if not members:
-                await interaction.followup.send(
-                    '🤦‍♀️ 該当するメンバーがいませんでした',
-                    ephemeral=True
-                )
-                return
+#             if not members:
+#                 await interaction.followup.send(
+#                     '🤦‍♀️ 該当するメンバーがいませんでした',
+#                     ephemeral=True
+#                 )
+#                 return
             
-            await interaction.followup.send(
-                f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
-                ephemeral=True
-            )
+#             await interaction.followup.send(
+#                 f'👥 {role.name} ロールのメンバーは...\n{member_list}\nです！',
+#                 ephemeral=True
+#             )
 
-        except Exception as e:
-            await send_error_log(e, inspect.currentframe().f_code.co_name)
-            await interaction.followup.send('なにかがおかしいよ')
+#         except Exception as e:
+#             await send_error_log(e, inspect.currentframe().f_code.co_name)
+#             await interaction.followup.send('なにかがおかしいよ')
 
 
 @tree.command(name='get-join-record', description='ユーザーIDを使用して参加記録を取得します。')
@@ -100,9 +102,9 @@ async def get_join_record_command(
         return
 
     try:
-        with get_db_connection() as conn:
+        with get_db_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute('SELECT * FROM join_records WHERE user_id = %s;', (member_id,))
+                cursor.execute('SELECT * FROM join_record WHERE user_id = %s;', (member_id,))
                 result = cursor.fetchone()
         
         if result:
@@ -127,9 +129,9 @@ async def remove_join_record_command(
         return
 
     try:
-        with get_db_connection() as conn:
+        with get_db_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute('DELETE FROM join_records WHERE user_id = %s;', (member_id,))
+                cursor.execute('DELETE FROM join_record WHERE user_id = %s;', (member_id,))
         await interaction.followup.send(f'DELETE: {member_id}\n完了しました。')
     
     except Exception as e:
@@ -137,7 +139,16 @@ async def remove_join_record_command(
 
 
 ##### bot event functions #####
-def get_db_connection():
+# def get_db_connection():
+#     return psycopg2.connect(
+#         host=DATABASE_HOST,
+#         user=DATABASE_USER,
+#         password=DATABASE_PASSWORD,
+#         dbname=DATABASE_NAME,
+#         port=5432
+#     )
+
+def get_db_conn():
     return psycopg2.connect(
         host=DATABASE_HOST,
         user=DATABASE_USER,
@@ -149,9 +160,8 @@ def get_db_connection():
 
 def get_join_record() -> list[tuple, datetime_date|None]:
     join_record = []
-
     try:
-        with get_db_connection() as conn:
+        with get_db_conn() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(SQL_SELECT_RECORD)
                 result = cursor.fetchall()
@@ -176,7 +186,7 @@ def update_join_record(member_id: int, date_null=False):
     else:
         date = datetime.now(JST).date()
 
-    with get_db_connection() as conn:
+    with get_db_conn() as conn:
         with conn.cursor() as cursor:
             if date:
                 cursor.execute(
@@ -194,7 +204,7 @@ def update_join_record(member_id: int, date_null=False):
 
 
 def remove_join_record(member_id: int):
-    with get_db_connection() as conn:
+    with get_db_conn() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 SQL_DELETE_RECORD,
@@ -232,7 +242,7 @@ def get_inactive_members() -> list[tuple[int, str]]:
 
 scheduler = AsyncIOScheduler()
 
-@scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
+@scheduler.scheduled_job(CronTrigger(second=0, timezone='Asia/Tokyo'))
 async def join_record_reminder():
     """
     send join record(daily)
@@ -274,7 +284,7 @@ async def on_voice_state_update(
                 # start notification
                 date = get_date_str()
                 message = await text_channel.send(
-                    f'{date}\n🎧 <@{member.id}> が **<#{voice_channel.id}>** でボイスチャットを開始！'
+                    f'{date}\n🎧 <@{member.id}> が **<#{voice_channel.id}>** でボイスチャットを開始しました。'
                 )
                 active_voice_channels[voice_channel.id] = message.id
         
@@ -295,13 +305,14 @@ async def on_voice_state_update(
                 )
                 active_voice_channels.pop(voice_channel.id)
         
-        target_role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
-        has_target_role = any(role.id == target_role_id for role in member.roles)
-        if has_target_role and member.id not in JOIN_RECORD_WHITE_LIST:
-            update_join_record(member.id)
+        # target_role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
+        # has_target_role = any(role.id == target_role_id for role in member.roles)
+        # if has_target_role and member.id not in JOIN_RECORD_WHITE_LIST:
+        update_join_record(member.id)
 
-    except Exception as e:
-        await send_error_log(e, inspect.currentframe().f_code.co_name)
+    except Exception:
+        channel = bot.get_channel(CHANNEL_ID_LOG)
+        await channel.send(traceback.format_exc(), silent=True)
 
 
 def get_date_str() -> str:
@@ -311,37 +322,31 @@ def get_date_str() -> str:
 
 @bot.event
 async def on_member_join(member: discord.Member):
-    """
-    add the role to a newly joined member
-    register member.id to join_record
-    """
-    role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
-    role = member.guild.get_role(role_id)
+    # role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
+    # role = member.guild.get_role(role_id)
 
-    if role and member.id not in JOIN_RECORD_WHITE_LIST:
-        try:
-            await member.add_roles(role, reason='bot自動登録')
-            update_join_record(member.id, date_null=True)
-        except Exception as e:
-            await send_error_log(e, inspect.currentframe().f_code.co_name)
+    # if role and member.id not in JOIN_RECORD_WHITE_LIST:
+    try:
+        # await member.add_roles(role, reason='bot自動登録')
+        update_join_record(member.id, date_null=True)
+    except Exception:
+        channel = bot.get_channel(CHANNEL_ID_LOG)
+        await channel.send(traceback.format_exc(), silent=True)
 
 
 @bot.event
 async def on_member_remove(member: discord.Member):
-    """
-    remove member.id from join_record
-    """
+    channel = bot.get_channel(CHANNEL_ID_MANAGE)
     try:
+        await channel.send(f'{get_date_str()}<@{member.id}>が退出しました。')
         remove_join_record(member.id)
-    except Exception as e:
-        await send_error_log(e, inspect.currentframe().f_code.co_name)
+    except Exception:
+        channel = bot.get_channel(CHANNEL_ID_LOG)
+        await channel.send(traceback.format_exc(), silent=True)
 
 
 @bot.event
 async def on_scheduled_event_create(event: discord.ScheduledEvent):
-    """
-    send event-created notification
-    """
     if event.guild_id == SERVER_ID:
         channel_id = CHANNEL_ID_OSHIRASE
     else:
@@ -350,7 +355,7 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
     channel = bot.get_channel(channel_id)
     content = f'<@{event.creator_id}> がイベントを作成しました📝\n{event.url}'
 
-    await channel.send(content=content)
+    await channel.send(content)
 
 
 # @bot.event
@@ -363,17 +368,14 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
 #         print(f'on_member_join: Could not send the message to {member.display_name}')
 
 
-async def send_error_log(e: Exception, func_name: str = None):
-    channel = bot.get_channel(CHANNEL_ID_TEST_TX)
-    message =f'Function:{func_name}\nStacktrace:\n```{(repr(e))}```'
-    await channel.send(message)
+# async def send_error_log(e: Exception, func_name: str = None):
+#     channel = bot.get_channel(CHANNEL_ID_LOG)
+#     message =f'Function:{func_name}\nStacktrace:\n```{traceback.format_tb(e.__traceback__)}```'
+#     await channel.send(message)
 
 
 @bot.event
 async def on_ready():
-    """
-    bot start-up
-    """
     await tree.sync()
     print(f'Logged in as {bot.user}')
 
