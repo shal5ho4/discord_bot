@@ -1,6 +1,4 @@
 import discord
-import inspect
-import json
 import psycopg2
 import traceback
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -8,10 +6,9 @@ from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timezone, timedelta
 from datetime import date as datetime_date
 from discord.ext import commands
-from pathlib import Path
-from psycopg2 import pool
 
 from const import *
+from log import DiscordLogger
 # from modal import RegisterView
 # from server import server_thread
 
@@ -25,6 +22,7 @@ intents.members = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 tree = bot.tree
+logger = DiscordLogger(bot=bot, channel_id=CHANNEL_ID_LOG)
 
 ##### bot commands #####
 @tree.command(name='henlo', description='Say hello')
@@ -180,7 +178,8 @@ def get_join_record() -> list[tuple, datetime_date|None]:
     return join_record
 
 
-def update_join_record(member_id: int, date_null=False):
+def update_join_record(member_id: int, date_null=False) -> str:
+    res = ''
     if date_null:
         date = None
     else:
@@ -193,25 +192,28 @@ def update_join_record(member_id: int, date_null=False):
                     SQL_INSERT_WITH_DATE,
                     (member_id, date)
                 )
-                print(f'SQL: {SQL_INSERT_WITH_DATE}\nmember_id: {member_id}, date: {date}')
+                res = f'SQL: {SQL_INSERT_WITH_DATE}\nmember_id: {member_id}, date: {date}'
             else:
                 cursor.execute(
                     SQL_INSERT_WITHOUT_DATE,
                     (member_id,)
                 )
-                print(f'SQL: {SQL_INSERT_WITHOUT_DATE}\nmember_id: {member_id}, date: NULL')
+                res = f'SQL: {SQL_INSERT_WITHOUT_DATE}\nmember_id: {member_id}, date: NULL'
             conn.commit()
+    
+    return res
 
 
-def remove_join_record(member_id: int):
+def remove_join_record(member_id: int) -> str:
     with get_db_conn() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 SQL_DELETE_RECORD,
                 (member_id,)
             )
-            print(f'SQL: {SQL_DELETE_RECORD}\nmember_id: {member_id}')
         conn.commit()
+    
+    return f'EXECUTE: {SQL_DELETE_RECORD}\nmember_id: {member_id}'
 
 
 def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]:
@@ -253,7 +255,7 @@ async def join_record_reminder():
         member_id, days_ago = t
         list_str += f'<@{member_id}>: {days_ago}\n'
 
-    message = f'対象メンバー:\n{list_str}'
+    message = f'2026/04/28からのVC参加記録だゾ～📊\n{list_str}'
 
     channel_id = CHANNEL_ID_TEST_TX if DEBUG else CHANNEL_ID_MANAGE_2
     channel = bot.get_channel(channel_id)
@@ -311,8 +313,7 @@ async def on_voice_state_update(
         update_join_record(member.id)
 
     except Exception:
-        channel = bot.get_channel(CHANNEL_ID_LOG)
-        await channel.send(traceback.format_exc(), silent=True)
+        await logger.error(traceback.format_exc())
 
 
 def get_date_str() -> str:
@@ -328,21 +329,19 @@ async def on_member_join(member: discord.Member):
     # if role and member.id not in JOIN_RECORD_WHITE_LIST:
     try:
         # await member.add_roles(role, reason='bot自動登録')
-        update_join_record(member.id, date_null=True)
+        res = update_join_record(member.id, date_null=True)
+        await logger.info(res)
     except Exception:
-        channel = bot.get_channel(CHANNEL_ID_LOG)
-        await channel.send(traceback.format_exc(), silent=True)
+        await logger.error(traceback.format_exc())
 
 
 @bot.event
 async def on_member_remove(member: discord.Member):
-    channel = bot.get_channel(CHANNEL_ID_MANAGE)
     try:
-        await channel.send(f'{get_date_str()}<@{member.id}>が退出しました。')
-        remove_join_record(member.id)
+        res = remove_join_record(member.id)
+        await logger.info(res)
     except Exception:
-        channel = bot.get_channel(CHANNEL_ID_LOG)
-        await channel.send(traceback.format_exc(), silent=True)
+        await logger.error(traceback.format_exc())
 
 
 @bot.event
@@ -377,9 +376,9 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
 @bot.event
 async def on_ready():
     await tree.sync()
-    print(f'Logged in as {bot.user}')
-
     scheduler.start()
+    print(f'on_ready: Logged in as {bot.user}')
+    # await logger.info(f'on_ready: Logged in as {bot.user}')
 
 
 
