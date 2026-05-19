@@ -192,13 +192,13 @@ def update_join_record(member_id: int, date_null=False) -> str:
                     SQL_INSERT_WITH_DATE,
                     (member_id, date)
                 )
-                res = f'SQL: {SQL_INSERT_WITH_DATE}\nmember_id: {member_id}, date: {date}'
+                res = f'update_join_record: {SQL_INSERT_WITH_DATE}\nmember_id: {member_id}, date: {date}'
             else:
                 cursor.execute(
                     SQL_INSERT_WITHOUT_DATE,
                     (member_id,)
                 )
-                res = f'SQL: {SQL_INSERT_WITHOUT_DATE}\nmember_id: {member_id}, date: NULL'
+                res = f'update_join_record: {SQL_INSERT_WITHOUT_DATE}\nmember_id: {member_id}, date: NULL'
             conn.commit()
     
     return res
@@ -213,7 +213,7 @@ def remove_join_record(member_id: int) -> str:
             )
         conn.commit()
     
-    return f'EXECUTE: {SQL_DELETE_RECORD}\nmember_id: {member_id}'
+    return f'remove_join_record: {SQL_DELETE_RECORD}\nmember_id: {member_id}'
 
 
 def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]:
@@ -250,6 +250,7 @@ async def join_record_reminder():
     send join record(daily)
     """
     inactive_members = get_inactive_members()
+    await logger.info(f'join_record_reminder:\n{inactive_members}')
     list_str = ''
     for t in inactive_members:
         member_id, days_ago = t
@@ -279,11 +280,9 @@ async def on_voice_state_update(
             voice_channel = after.channel
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
             text_channel = bot.get_channel(text_channel_id)
-            
-            print(f'send notification to → {text_channel.name}')
 
             if len(voice_channel.members) == 1:
-                # start notification
+                await logger.info(f'on_voice_state_update:\nsend notification to → {text_channel.name}')
                 date = get_date_str()
                 message = await text_channel.send(
                     f'{date}\n🎧 <@{member.id}> が **<#{voice_channel.id}>** でボイスチャットを開始しました。'
@@ -296,7 +295,7 @@ async def on_voice_state_update(
             text_channel = bot.get_channel(text_channel_id)
 
             if len(voice_channel.members) == 0 and voice_channel.id in active_voice_channels:
-                # end notification
+                await logger.info(f'on_voice_state_update:\nsend notification to → {text_channel.name}')
                 msg_id = active_voice_channels[voice_channel.id]
                 original_message = await text_channel.fetch_message(msg_id)
 
@@ -310,10 +309,11 @@ async def on_voice_state_update(
         # target_role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
         # has_target_role = any(role.id == target_role_id for role in member.roles)
         # if has_target_role and member.id not in JOIN_RECORD_WHITE_LIST:
-        update_join_record(member.id)
+        res = update_join_record(member.id)
+        await logger.info(f'on_voice_state_update:\n{res}')
 
     except Exception:
-        await logger.error(traceback.format_exc())
+        await logger.error(f'on_voice_state_update\n{traceback.format_exc()}')
 
 
 def get_date_str() -> str:
@@ -330,18 +330,18 @@ async def on_member_join(member: discord.Member):
     try:
         # await member.add_roles(role, reason='bot自動登録')
         res = update_join_record(member.id, date_null=True)
-        await logger.info(res)
+        await logger.info(f'on_member_join:\n{res}')
     except Exception:
-        await logger.error(traceback.format_exc())
+        await logger.error(f'on_member_join\n{traceback.format_exc()}')
 
 
 @bot.event
 async def on_member_remove(member: discord.Member):
     try:
         res = remove_join_record(member.id)
-        await logger.info(res)
+        await logger.info(f'on_member_remove:\n{res}')
     except Exception:
-        await logger.error(traceback.format_exc())
+        await logger.error(f'on_member_remove:\n{traceback.format_exc()}')
 
 
 @bot.event
