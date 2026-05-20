@@ -1,4 +1,7 @@
-import discord
+import os
+import platform
+import psutil
+import shutil
 from discord.ext import commands
 from datetime import datetime
 
@@ -6,8 +9,6 @@ class DiscordLogger:
     def __init__(self, bot: commands.Bot, channel_id: int):
         self.bot = bot
         self.channel_id = channel_id
-        print(f'self.bot: {self.bot}')
-        print(f'self.channel_id: {self.channel_id}')
 
     @property
     def channel(self):
@@ -18,11 +19,13 @@ class DiscordLogger:
 
         icons = {
             "INFO": "🟢",
-            "ERROR": "🔴"
+            "ERROR": "🔴",
+            "SYSTEM": "🔵"
         }
-
         icon = icons.get(level, "⚪")
 
+        if level == "ERROR":
+            return f"<@840937804238422016>\n{icon} [{level}] {now}\n```{message}```"
         return f"{icon} [{level}] {now}\n```{message}```"
 
     async def info(self, message):
@@ -34,5 +37,26 @@ class DiscordLogger:
     async def error(self, message):
         await self.channel.send(
             self._format("ERROR", str(message)),
+            silent=True
+        )
+
+    async def system(self):
+        cpu = psutil.cpu_percent(interval=None)
+        mem = psutil.virtual_memory()
+        disk = shutil.disk_usage("/")
+
+        message = (
+            f"OS: {platform.system()} {platform.release()}\n"
+            f"CPU: {cpu}%\n"
+            f"MEMORY: {mem.percent}% "
+            f"({mem.used // 1024**2}MB / {mem.total // 1024**2}MB)\n"
+            f"DISK: {disk.used // 1024**3}GB / "
+            f"{disk.total // 1024**3}GB "
+            f"({disk.used / disk.total * 100:.1f}%)\n"
+            f"PID: {os.getpid()}"
+        )
+
+        await self.channel.send(
+            self._format("SYSTEM", message),
             silent=True
         )

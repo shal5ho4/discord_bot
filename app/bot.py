@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timezone, timedelta
 from datetime import date as datetime_date
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from const import *
 from log import DiscordLogger
@@ -276,13 +276,16 @@ async def on_voice_state_update(
     send VC notifications
     """
     try:
+        await logger.info(
+            f'on_voice_state_update:\n  member = {member}\n  before.channel = {before.channel}\n  after.channel = {after.channel}'
+        )
         if before.channel is None and after.channel is not None:
             voice_channel = after.channel
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
             text_channel = bot.get_channel(text_channel_id)
 
             if len(voice_channel.members) == 1:
-                await logger.info(f'on_voice_state_update:\nsend notification to → {text_channel.name}')
+                await logger.info(f'on_voice_state_update:\nsend start notification to → {text_channel.name}')
                 date = get_date_str()
                 message = await text_channel.send(
                     f'{date}\n🎧 <@{member.id}> が **<#{voice_channel.id}>** でボイスチャットを開始しました。'
@@ -295,7 +298,7 @@ async def on_voice_state_update(
             text_channel = bot.get_channel(text_channel_id)
 
             if len(voice_channel.members) == 0 and voice_channel.id in active_voice_channels:
-                await logger.info(f'on_voice_state_update:\nsend notification to → {text_channel.name}')
+                await logger.info(f'on_voice_state_update:\nsend end notification to → {text_channel.name}')
                 msg_id = active_voice_channels[voice_channel.id]
                 original_message = await text_channel.fetch_message(msg_id)
 
@@ -310,7 +313,7 @@ async def on_voice_state_update(
         # has_target_role = any(role.id == target_role_id for role in member.roles)
         # if has_target_role and member.id not in JOIN_RECORD_WHITE_LIST:
         res = update_join_record(member.id)
-        await logger.info(f'on_voice_state_update:\n{res}')
+        await logger.info(f'on_voice_state_update:\nupdate member.id = {member.id}')
 
     except Exception:
         await logger.error(f'on_voice_state_update\n{traceback.format_exc()}')
@@ -373,13 +376,20 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
 #     await channel.send(message)
 
 
+@tasks.loop(minutes=30)
+async def health_check():
+    await logger.system()
+
+
 @bot.event
 async def on_ready():
     await tree.sync()
-    scheduler.start()
-    print(f'on_ready: Logged in as {bot.user}')
-    # await logger.info(f'on_ready: Logged in as {bot.user}')
 
+    scheduler.start()
+    health_check.start()
+    
+    # print(f'on_ready: Logged in as {bot.user}')
+    await logger.info(f'on_ready: Logged in as {bot.user}')
 
 
 if __name__ == '__main__':
