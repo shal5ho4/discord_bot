@@ -276,10 +276,10 @@ async def on_voice_state_update(
     send VC notifications
     """
     try:
-        await logger.info(
-            f'on_voice_state_update:\n  member = {member}\n  before.channel = {before.channel}\n  after.channel = {after.channel}'
-        )
         if before.channel is None and after.channel is not None:
+            await logger.info(
+                f'on_voice_state_update:\n  member = {member}\n  before.channel = {before.channel}\n  after.channel = {after.channel}'
+            )
             voice_channel = after.channel
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
             text_channel = bot.get_channel(text_channel_id)
@@ -293,9 +293,15 @@ async def on_voice_state_update(
                 active_voice_channels[voice_channel.id] = message.id
         
         elif before.channel is not None and after.channel is None:
+            await logger.info(
+                f'on_voice_state_update:\n  member = {member}\n  before.channel = {before.channel}\n  after.channel = {after.channel}'
+            )
             voice_channel = before.channel
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
             text_channel = bot.get_channel(text_channel_id)
+
+            res = update_join_record(member.id)
+            await logger.info(f'on_voice_state_update:\nupdate member.id = {member.id}')
 
             if len(voice_channel.members) == 0 and voice_channel.id in active_voice_channels:
                 await logger.info(f'on_voice_state_update:\nsend end notification to → {text_channel.name}')
@@ -308,12 +314,6 @@ async def on_voice_state_update(
                     silent=True
                 )
                 active_voice_channels.pop(voice_channel.id)
-        
-        # target_role_id = ROLE_ID_TEST if DEBUG else ROLE_ID_RISE
-        # has_target_role = any(role.id == target_role_id for role in member.roles)
-        # if has_target_role and member.id not in JOIN_RECORD_WHITE_LIST:
-        res = update_join_record(member.id)
-        await logger.info(f'on_voice_state_update:\nupdate member.id = {member.id}')
 
     except Exception:
         await logger.error(f'on_voice_state_update\n{traceback.format_exc()}')
@@ -376,7 +376,7 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
 #     await channel.send(message)
 
 
-@tasks.loop(minutes=30)
+@tasks.loop(minutes=60)
 async def health_check():
     await logger.system()
 
