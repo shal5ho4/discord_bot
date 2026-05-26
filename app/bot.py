@@ -171,7 +171,7 @@ async def misogi_list(interaction: discord.Interaction):
                 member = interaction.guild.get_member(member_id)
                 if member is None:
                     member = await interaction.guild.fetch_member(member_id)
-                list_str += f'✝️{member.display_name}: {point}ポイント\n'
+                list_str += f'✝️ {member.display_name}: {point}ポイント\n'
 
             await interaction.response.send_message(
                 f'†悔い改めて†\n{list_str}'
@@ -233,13 +233,13 @@ def update_join_record(member_id: int, date_null=False) -> str:
                     SQL_INSERT_WITH_DATE,
                     (member_id, date)
                 )
-                res = f'update_join_record:\n{SQL_INSERT_WITH_DATE}\nmember_id={member_id}, date={date}'
+                res = f'update_join_record:{SQL_INSERT_WITH_DATE}\nmember_id={member_id}, date={date}'
             else:
                 cursor.execute(
                     SQL_INSERT_WITHOUT_DATE,
                     (member_id,)
                 )
-                res = f'update_join_record:\n{SQL_INSERT_WITHOUT_DATE}\nmember_id={member_id}, date=NULL'
+                res = f'update_join_record:{SQL_INSERT_WITHOUT_DATE}\nmember_id={member_id}, date=NULL'
             conn.commit()
     
     return res
@@ -254,7 +254,7 @@ def remove_join_record(member_id: int) -> str:
             )
         conn.commit()
     
-    return f'remove_join_record:\n{SQL_DELETE_RECORD}\nmember_id = {member_id}'
+    return f'remove_join_record:{SQL_DELETE_RECORD}\nmember_id = {member_id}'
 
 
 def sort_joined_members(members: list[tuple[int, str, str]]) -> list[tuple[int, str, str]]:
@@ -297,7 +297,7 @@ def add_point(member_id: int) -> str:
             cursor.execute(SQL_UPDATE_POINT, (member_id,))
         conn.commit()
     
-    return f'add_point:\n{SQL_UPDATE_POINT}\nmember_id = {member_id}'
+    return f'add_point:{SQL_UPDATE_POINT}\nmember_id = {member_id}'
 
 
 def reset_point(member_id: int) -> str:
@@ -306,7 +306,7 @@ def reset_point(member_id: int) -> str:
             cursor.execute(SQL_UPDATE_POINT_RESET, (member_id,))
         conn.commit()
     
-    return f'reset_point:\n{SQL_UPDATE_POINT_RESET}\nmember_id = {member_id}'
+    return f'reset_point:{SQL_UPDATE_POINT_RESET}\nmember_id = {member_id}'
 
 
 def get_point_list() -> list[tuple[int, int]]:
@@ -332,7 +332,7 @@ async def join_record_reminder():
     send join record(daily)
     """
     inactive_members = get_inactive_members()
-    await logger.info(f'join_record_reminder:\n{SQL_SELECT_RECORD}\nresult(len) = {len(inactive_members)}')
+    await logger.info(f'join_record_reminder:{SQL_SELECT_RECORD}\nresult(len) = {len(inactive_members)}')
     list_str = ''
     for t in inactive_members:
         member_id, days_ago, icon = t
