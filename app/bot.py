@@ -117,18 +117,34 @@ async def remove_join_record_command(
         await interaction.followup.send(f'ERROR: {member_id}\n{repr(e)}')
 
 
-@tree.command(name='misogi-add', description='禊ポイントを"+1"します。')
+@tree.command(name='misogi-add', description='禊ポイントを+1します。')
 @discord.app_commands.checks.has_permissions(administrator=True)
 async def misogi_add(
     interaction: discord.Interaction,
     member: discord.Member
 ):
     try:
+        title = f'{member.mention}\n✅禊ポイントが+1されました。'
         res = add_point(member.id)
         await logger.info(res)
-        await interaction.response.send_message(
-            f'{member.mention}\n✅禊ポイントが+1されました。'
-        )
+
+        result = get_point_list()
+        await logger.info(f'misogi_list(cmd):\nresult = {result}')
+        if result:
+            list_str = ''
+            for t in result:
+                member_id, point = t
+                member = interaction.guild.get_member(member_id)
+                if member is None:
+                    member = await interaction.guild.fetch_member(member_id)
+                list_str += f'{member.display_name}: {point}pt\n'
+            await interaction.response.send_message(
+                f'{title}\n\n現在の禊ポイント保有者: {len(result)}人\n```{list_str}```'
+            )
+        else:
+            await interaction.response.send_message(
+                f'{title}\n\n現在の禊ポイント保有者: {len(result)}人'
+            )
 
     except Exception as e:
         await interaction.response.send_message(
@@ -144,26 +160,12 @@ async def misogi_reset(
     member: discord.Member
 ):
     try:
+        title = f'{member.mention}\n✅禊ポイントがリセットされました。'
         res = reset_point(member.id)
         await logger.info(res)
-        await interaction.response.send_message(
-            f'{member.mention}\n✅禊ポイントがリセットされました。'
-        )
 
-    except Exception as e:
-        await interaction.response.send_message(
-            f'なにかがおかしいよ\n{repr(e)}'
-        )
-        await logger.error(f'misogi_reset(cmd):\n{traceback.format_exc()}')
-
-
-@tree.command(name='misogi-list', description='禊ポイントがついている人を表示します。')
-@discord.app_commands.checks.has_permissions(administrator=True)
-async def misogi_list(interaction: discord.Interaction):
-    try:
         result = get_point_list()
         await logger.info(f'misogi_list(cmd):\nresult = {result}')
-
         if result:
             list_str = ''
             for t in result:
@@ -171,19 +173,20 @@ async def misogi_list(interaction: discord.Interaction):
                 member = interaction.guild.get_member(member_id)
                 if member is None:
                     member = await interaction.guild.fetch_member(member_id)
-                list_str += f'✝️ {member.display_name}: {point}ポイント\n'
-
+                list_str += f'{member.display_name}: {point}pt\n'
             await interaction.response.send_message(
-                f'†悔い改めて†\n{list_str}'
+                f'{title}\n\n現在の禊ポイント保有者: {len(result)}人\n```{list_str}```'
             )
         else:
-            await interaction.response.send_message('禊ポイントが付いているメンバーはいません。')
+            await interaction.response.send_message(
+                f'{title}\n\n現在の禊ポイント保有者: {len(result)}人'
+            )
 
     except Exception as e:
         await interaction.response.send_message(
             f'なにかがおかしいよ\n{repr(e)}'
         )
-        await logger.info(f'misogi_list(cmd):\n{traceback.format_exc()}')
+        await logger.error(f'misogi_reset(cmd):\n{traceback.format_exc()}')
 
 
 ##### bot event functions #####
