@@ -24,6 +24,11 @@ SQL_CREATE_TABLE = '''
         joined_date DATE
     );
 '''
+SQL_ADD_COLUMN_POINT = '''
+    ALTER TABLE join_record
+    ADD COLUMN point INTEGER NOT NULL DEFAULT 0;
+'''
+
 SQL_SELECT_RECORD = '''
     SELECT user_id, joined_date FROM join_record
 '''
@@ -41,6 +46,22 @@ SQL_INSERT_WITHOUT_DATE = '''
 '''
 SQL_DELETE_RECORD = '''
     DELETE FROM join_record WHERE user_id = %s
+'''
+
+SQL_SELECT_POINT = '''
+    SELECT user_id, point FROM join_record
+    WHERE point > 0
+    ORDER BY point DESC;
+'''
+SQL_UPDATE_POINT = '''
+    UPDATE join_record
+    SET point = point + 1
+    WHERE user_id = ?;
+'''
+SQL_UPDATE_POINT_RESET = '''
+    UPDATE join_record
+    SET point = 0
+    WHERE user_id = ?;
 '''
 
 # token

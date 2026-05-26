@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timezone, timedelta
 from datetime import date as datetime_date
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from const import *
 from log import DiscordLogger
@@ -87,34 +87,15 @@ async def hello_command(interaction: discord.Interaction):
 #             await interaction.followup.send('なにかがおかしいよ')
 
 
-@tree.command(name='get-join-record', description='ユーザーIDを使用して参加記録を取得します。')
-@discord.app_commands.describe(member_id='ユーザーIDを入力')
-async def get_join_record_command(
-    interaction: discord.Interaction,
-    member_id: str
-):
-    await interaction.response.defer(thinking=True)
-
-    if interaction.channel_id not in COMMAND_WHITE_LIST:
-        await interaction.followup.send('❌ ここではつかえません', ephemeral=True)
-        return
-
-    try:
-        with get_db_conn() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute('SELECT * FROM join_record WHERE user_id = %s;', (member_id,))
-                result = cursor.fetchone()
-        
-        if result:
-            await interaction.followup.send(f'GET: {member_id}\n完了しました。\n{result}')
-        else:
-            await interaction.followup.send(f'GET: {member_id}\n対象レコードがありません。')
-    
-    except Exception as e:
-        await interaction.followup.send(f'ERROR: {member_id}\n{repr(e)}')
+@tree.command(name='get-join-record', description='参加記録を手動で取得します。')
+@discord.app_commands.checks.has_permissions(administrator=True)
+async def get_join_record_command(interaction: discord.Interaction):
+    await join_record_reminder()
+    await interaction.response.send_message('get-join-record:\n完了しました。')
 
 
 @tree.command(name='remove-join-record', description='ユーザーIDを使用して参加記録を削除します。')
+@discord.app_commands.checks.has_permissions(administrator=True)
 @discord.app_commands.describe(member_id='ユーザーIDを入力')
 async def remove_join_record_command(
     interaction: discord.Interaction,
@@ -136,16 +117,76 @@ async def remove_join_record_command(
         await interaction.followup.send(f'ERROR: {member_id}\n{repr(e)}')
 
 
-##### bot event functions #####
-# def get_db_connection():
-#     return psycopg2.connect(
-#         host=DATABASE_HOST,
-#         user=DATABASE_USER,
-#         password=DATABASE_PASSWORD,
-#         dbname=DATABASE_NAME,
-#         port=5432
-#     )
+@tree.command(name='misogi-add', description='禊ポイントを"+1"します。')
+@discord.app_commands.checks.has_permissions(administrator=True)
+async def misogi_add(
+    interaction: discord.Interaction,
+    member: discord.Member
+):
+    try:
+        res = add_point(member.id)
+        await logger.info(res)
+        await interaction.response.send_message(
+            f'⚠️{member.mention}\n禊ポイントが+1されました。'
+        )
 
+    except Exception as e:
+        await interaction.response.send_message(
+            f'なにかがおかしいよ\n{repr(e)}'
+        )
+        await logger.error(f'misogi_add(cmd):\n{traceback.format_exc()}')
+
+
+@tree.command(name='misogi-reset', description='禊ポイントをリセットします。')
+@discord.app_commands.checks.has_permissions(administrator=True)
+async def misogi_reset(
+    interaction: discord.Interaction,
+    member: discord.Member
+):
+    try:
+        res = reset_point(member.id)
+        await logger.info(res)
+        await interaction.response.send_message(
+            f'✅{member.mention}\n禊ポイントがリセットされました。'
+        )
+
+    except Exception as e:
+        await interaction.response.send_message(
+            f'なにかがおかしいよ\n{repr(e)}'
+        )
+        await logger.error(f'misogi_reset(cmd):\n{traceback.format_exc()}')
+
+
+@tree.command(name='misogi-list', description='禊ポイントがついている人を表示します。')
+@discord.app_commands.checks.has_permissions(administrator=True)
+async def misogi_list(interaction: discord.Interaction):
+    try:
+        result = get_point_list()
+        await logger.info(f'misogi_list(cmd):\nresult = {result}')
+
+        if result:
+            list_str = ''
+            for t in result:
+                member_id, point = t
+                member = interaction.guild.get_member(member_id)
+                if member is None:
+                    member = await interaction.guild.fetch_member(member_id)
+                list_str += f'✝️{member.display_name}: {point}ポイント\n'
+
+            await interaction.response.send_message(
+                f'†悔い改めて†\n{list_str}'
+            )
+        else:
+            await interaction.response.send_message('禊ポイントが付いているメンバーはいません。')
+
+    except Exception as e:
+        await interaction.response.send_message(
+            f'なにかがおかしいよ\n{repr(e)}'
+        )
+        await logger.info(f'misogi_list(cmd):\n{traceback.format_exc()}')
+
+
+##### bot event functions #####
 def get_db_conn():
     return psycopg2.connect(
         host=DATABASE_HOST,
@@ -192,13 +233,13 @@ def update_join_record(member_id: int, date_null=False) -> str:
                     SQL_INSERT_WITH_DATE,
                     (member_id, date)
                 )
-                res = f'update_join_record: {SQL_INSERT_WITH_DATE}\nmember_id: {member_id}, date: {date}'
+                res = f'update_join_record:\n{SQL_INSERT_WITH_DATE}\nmember_id={member_id}, date={date}'
             else:
                 cursor.execute(
                     SQL_INSERT_WITHOUT_DATE,
                     (member_id,)
                 )
-                res = f'update_join_record: {SQL_INSERT_WITHOUT_DATE}\nmember_id: {member_id}, date: NULL'
+                res = f'update_join_record:\n{SQL_INSERT_WITHOUT_DATE}\nmember_id={member_id}, date=NULL'
             conn.commit()
     
     return res
@@ -213,12 +254,12 @@ def remove_join_record(member_id: int) -> str:
             )
         conn.commit()
     
-    return f'remove_join_record: {SQL_DELETE_RECORD}\nmember_id: {member_id}'
+    return f'remove_join_record:\n{SQL_DELETE_RECORD}\nmember_id = {member_id}'
 
 
-def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]:
+def sort_joined_members(members: list[tuple[int, str, str]]) -> list[tuple[int, str, str]]:
     def sort_key(item):
-        _, days_info = item
+        _, days_info, _ = item
         if days_info == 'N/A':
             return (0, 0)
         days = int(days_info.split('日前')[0])
@@ -227,7 +268,7 @@ def sort_joined_members(members: list[tuple[int, str]]) -> list[tuple[int, str]]
     return sorted(members, key=sort_key)
 
 
-def get_inactive_members() -> list[tuple[int, str]]:
+def get_inactive_members() -> list[tuple[int, str, str]]:
     join_record = get_join_record()
     inactive_members = []
 
@@ -235,14 +276,55 @@ def get_inactive_members() -> list[tuple[int, str]]:
         if date:
             delta = datetime.now(JST) - datetime.strptime(date, '%Y/%m/%d').replace(tzinfo=JST)
             days_ago = f'{delta.days}日前 ({date})'
+            
+            if delta.days >= 30:
+                icon = '🔴'
+            elif delta.days >= 10:
+                icon = '🟡'
+            else:
+                icon = '🟢'
         else:
             days_ago = 'N/A'
-        inactive_members.append((int(member_id), days_ago))
+            icon = '⚪'
+        inactive_members.append((int(member_id), days_ago, icon))
     
     return sort_joined_members(inactive_members)
 
 
+def add_point(member_id: int) -> str:
+    with get_db_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(SQL_UPDATE_POINT, (member_id,))
+        conn.commit()
+    
+    return f'add_point:\n{SQL_UPDATE_POINT}\nmember_id = {member_id}'
+
+
+def reset_point(member_id: int) -> str:
+    with get_db_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(SQL_UPDATE_POINT_RESET, (member_id,))
+        conn.commit()
+    
+    return f'reset_point:\n{SQL_UPDATE_POINT_RESET}\nmember_id = {member_id}'
+
+
+def get_point_list() -> list[tuple[int, int]]:
+    result = []
+    with get_db_conn() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(SQL_SELECT_POINT)
+            result = cursor.fetchall()
+    
+    return result
+
+
 scheduler = AsyncIOScheduler()
+
+@scheduler.scheduled_job(CronTrigger(minute=30))
+async def health_check():
+    await logger.system()
+
 
 @scheduler.scheduled_job(CronTrigger(hour=18, timezone='Asia/Tokyo'))
 async def join_record_reminder():
@@ -250,11 +332,11 @@ async def join_record_reminder():
     send join record(daily)
     """
     inactive_members = get_inactive_members()
-    await logger.info(f'join_record_reminder:\n{inactive_members}')
+    await logger.info(f'join_record_reminder:\n{SQL_SELECT_RECORD}\nresult(len) = {len(inactive_members)}')
     list_str = ''
     for t in inactive_members:
-        member_id, days_ago = t
-        list_str += f'<@{member_id}>: {days_ago}\n'
+        member_id, days_ago, icon = t
+        list_str += f'{icon}<@{member_id}>: {days_ago}\n'
 
     message = f'2026/04/28からのVC参加記録だゾ～📊\n{list_str}'
 
@@ -278,7 +360,7 @@ async def on_voice_state_update(
     try:
         if before.channel is None and after.channel is not None:
             await logger.info(
-                f'on_voice_state_update:\n  member = {member}\n  before.channel = {before.channel}\n  after.channel = {after.channel}'
+                f'on_voice_state_update:\nmember = {member}\nbefore.channel = {before.channel}\nafter.channel = {after.channel}'
             )
             voice_channel = after.channel
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
@@ -294,7 +376,7 @@ async def on_voice_state_update(
         
         elif before.channel is not None and after.channel is None:
             await logger.info(
-                f'on_voice_state_update:\n  member = {member}\n  before.channel = {before.channel}\n  after.channel = {after.channel}'
+                f'on_voice_state_update:\nmember = {member}\nbefore.channel = {before.channel}\nafter.channel = {after.channel}'
             )
             voice_channel = before.channel
             text_channel_id = TX_CHANNEL_IDS.get(voice_channel.id, CHANNEL_ID_TEST_TX)
@@ -376,17 +458,11 @@ async def on_scheduled_event_create(event: discord.ScheduledEvent):
 #     await channel.send(message)
 
 
-@tasks.loop(minutes=60)
-async def health_check():
-    await logger.system()
-
-
 @bot.event
 async def on_ready():
     await tree.sync()
 
     scheduler.start()
-    health_check.start()
     
     # print(f'on_ready: Logged in as {bot.user}')
     await logger.info(f'on_ready: Logged in as {bot.user}')
