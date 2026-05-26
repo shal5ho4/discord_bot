@@ -127,7 +127,7 @@ async def misogi_add(
         res = add_point(member.id)
         await logger.info(res)
         await interaction.response.send_message(
-            f'⚠️{member.mention}\n禊ポイントが+1されました。'
+            f'{member.mention}\n✅禊ポイントが+1されました。'
         )
 
     except Exception as e:
@@ -147,7 +147,7 @@ async def misogi_reset(
         res = reset_point(member.id)
         await logger.info(res)
         await interaction.response.send_message(
-            f'✅{member.mention}\n禊ポイントがリセットされました。'
+            f'{member.mention}\n✅禊ポイントがリセットされました。'
         )
 
     except Exception as e:
