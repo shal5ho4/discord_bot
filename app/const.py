@@ -56,12 +56,12 @@ SQL_SELECT_POINT = '''
 SQL_UPDATE_POINT = '''
     UPDATE join_record
     SET point = point + 1
-    WHERE user_id = ?;
+    WHERE user_id = %s;
 '''
 SQL_UPDATE_POINT_RESET = '''
     UPDATE join_record
     SET point = 0
-    WHERE user_id = ?;
+    WHERE user_id = %s;
 '''
 
 # token
