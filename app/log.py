@@ -1,4 +1,3 @@
-import os
 import platform
 import psutil
 import shutil
@@ -52,9 +51,12 @@ class DiscordLogger:
             f"({mem.used // 1024**2}MB / {mem.total // 1024**2}MB)\n"
             f"DISK: {disk.used // 1024**3}GB / "
             f"{disk.total // 1024**3}GB "
-            f"({disk.used / disk.total * 100:.1f}%)\n"
-            f"PID: {os.getpid()}"
+            f"({disk.used / disk.total * 100:.1f}%)\n\n"
+            "Proc:\n"
         )
+
+        for proc in psutil.process_iter(['pid', 'name']):
+            message += f'  {proc}\n'
 
         await self.channel.send(
             self._format("SYSTEM", message),
