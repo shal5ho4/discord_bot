@@ -52,11 +52,11 @@ class DiscordLogger:
             f"DISK: {disk.used // 1024**3}GB / "
             f"{disk.total // 1024**3}GB "
             f"({disk.used / disk.total * 100:.1f}%)\n\n"
-            "Proc:\n"
+            "Proc:"
         )
 
         for proc in psutil.process_iter(['pid', 'name']):
-            message += f'  {proc}\n'
+            message += f'\n  pid={proc.pid} name={proc.name} status={proc.status}'
 
         await self.channel.send(
             self._format("SYSTEM", message),
