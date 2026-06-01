@@ -56,7 +56,7 @@ class DiscordLogger:
         )
 
         for proc in psutil.process_iter(['pid', 'name']):
-            message += f'\n  pid={proc.pid} name={proc.name} status={proc.status}'
+            message += f'\n  pid={proc.pid} name={proc.name()} status={proc.status()}'
 
         await self.channel.send(
             self._format("SYSTEM", message),
