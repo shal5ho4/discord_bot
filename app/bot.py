@@ -282,7 +282,7 @@ def get_inactive_members() -> list[tuple[int, str, str]]:
             
             if delta.days >= 30:
                 icon = '🔴'
-            elif delta.days >= 10:
+            elif delta.days >= 14:
                 icon = '🟡'
             else:
                 icon = '🟢'
@@ -418,18 +418,18 @@ async def on_member_join(member: discord.Member):
     try:
         # await member.add_roles(role, reason='bot自動登録')
         res = update_join_record(member.id, date_null=True)
-        await logger.info(f'on_member_join:\n{res}')
+        await logger.info(f'on_member_join(member: {member}):\n{res}')
     except Exception:
-        await logger.error(f'on_member_join\n{traceback.format_exc()}')
+        await logger.error(f'on_member_join(member: {member})\n{traceback.format_exc()}')
 
 
 @bot.event
 async def on_member_remove(member: discord.Member):
     try:
         res = remove_join_record(member.id)
-        await logger.info(f'on_member_remove:\n{res}')
+        await logger.info(f'on_member_remove(member: {member}):\n{res}')
     except Exception:
-        await logger.error(f'on_member_remove:\n{traceback.format_exc()}')
+        await logger.error(f'on_member_remove(member: {member}):\n{traceback.format_exc()}')
 
 
 @bot.event
