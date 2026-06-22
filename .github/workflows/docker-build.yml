@@ -13,8 +13,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set branch tag
+        run: echo "IMAGE_TAG=$(echo ${GITHUB_REF_NAME} | tr '/' '-')" >> $GITHUB_ENV
+
       - name: Build Docker image
-        # uses: docker/build-push-action@v6
-        run: |
-          BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
-          docker build -t discord_bot:${BRANCH} .
+        run: docker build --pull -t discord_bot:${IMAGE_TAG} .
